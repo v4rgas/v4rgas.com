@@ -1,5 +1,5 @@
 const video = document.getElementById('video');
-video.loop = true
+video.loop = true;
 
 document.addEventListener('click', () => {
   video.play();
