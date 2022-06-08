@@ -1,2 +1,9 @@
-const audio = new Audio('audio.mp3')
-audio.play()
+const video = document.getElementById('video');
+
+document.addEventListener('click', () => {
+  video.play();
+}, true);
+
+document.addEventListener('keydown', () => {
+  video.play();
+}, true);
