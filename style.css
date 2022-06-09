@@ -3,6 +3,10 @@
   padding: 0;
 }
 
+.blackish {
+  background-color: #181a1b;
+}
+
 .black {
   background-color: black;
 }
@@ -15,6 +19,12 @@
   border: none;
   padding: 1%;
   border-radius: 15%;
+  color: white;
+  background-color: #2b2a33;
+}
+
+#button:hover {
+  background-color: grey;
 }
 
 #container {
