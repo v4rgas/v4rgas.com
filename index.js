@@ -1,11 +1,11 @@
 const video = document.getElementById('video');
 const cont = document.getElementById('container');
-const btn = document.getElementById('button');
+const main = document.getElementById('main');
 video.loop = true;
 
 const rick = () => {
   document.body.classList.add('black');
-  btn.hidden = true;
+  main.hidden = true;
   cont.hidden = false;
   video.play();
 };

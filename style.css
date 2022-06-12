@@ -1,6 +1,7 @@
 * {
   margin: 0;
   padding: 0;
+  font-family: Tahoma, sans-serif;
 }
 
 .blackish {
@@ -12,12 +13,13 @@
 }
 
 #button {
+  font-size: 12pt;
   transform: translate(-50%, -50%);
   position: absolute;
   top: 50%;
   left: 50%;
   border: none;
-  padding: 1%;
+  padding: 0.5em;
   border-radius: 15%;
   color: white;
   background-color: #2b2a33;
@@ -41,4 +43,26 @@ video {
   position: absolute;
   top: 50%;
   left: 50%;
+}
+
+footer {
+  border-radius: 10%;
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  color: white;
+  background-color: #2b2a33;
+
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+footer a {
+  color: white;
+  text-decoration: none; /* no underline */
+  font-size: 12pt;
 }
