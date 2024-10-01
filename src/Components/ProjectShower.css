@@ -4,15 +4,4 @@
     padding: 20px;
 }
 
-.project-name {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--color-accent-blue);
-    margin-bottom: 10px;
-}
-
-.project-description {
-    font-size: 1rem;
-    color: var(--color-accent-green);
-    margin-bottom: 10px;
-}
+.project-md {}
