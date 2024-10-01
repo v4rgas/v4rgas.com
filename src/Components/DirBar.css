@@ -1,0 +1,14 @@
+.dir-bar {
+    display: flex;
+    flex-direction: column;
+}
+
+.selected-dir {
+    background-color: var(--color-accent-blue);
+    color: var(--color-bg-default);
+    font-weight: bold;
+}
+
+.unselected-dir {
+    font-weight: bolder;
+}

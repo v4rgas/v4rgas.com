@@ -1,0 +1,16 @@
+.topbar {
+    text-align: left;
+    width: 100%;
+}
+
+.user {
+    color: var(--color-accent-green)
+}
+
+.route {
+    color: var(--color-accent-blue);
+}
+
+.folder {
+    font-weight: bolder;
+}

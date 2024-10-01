@@ -1,0 +1,62 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Background colors */
+  --color-bg-default: #000000;
+  /* Default Background */
+  --color-bg-lighter: #303030;
+  /* Lighter Background */
+  --color-bg-selection: #505050;
+  /* Selection Background */
+
+  /* Text and foreground colors */
+  --color-text-muted: #b0b0b0;
+  /* Muted Text (Comments, Line Highlights) */
+  --color-text-light: #d0d0d0;
+  /* Lighter Text */
+  --color-text-default: #e0e0e0;
+  /* Default Text, Foreground */
+  --color-text-contrast: #f5f5f5;
+  /* High Contrast Text */
+  --color-bg-light: #ffffff;
+  /* Light Background (often for cards or sections) */
+
+  /* Accent colors */
+  --color-accent-red: #fb0120;
+  /* Red - Error, Warnings */
+  --color-accent-orange: #fc6d24;
+  /* Orange - Alerts, Highlights */
+  --color-accent-yellow: #fda331;
+  /* Yellow - Warnings, Attention */
+  --color-accent-green: #a1c659;
+  /* Green - Success, Confirmation */
+  --color-accent-cyan: #76c7b7;
+  /* Cyan - Info, Links */
+  --color-accent-blue: #6fb3d2;
+  /* Blue - Primary Buttons, Links */
+  --color-accent-magenta: #d381c3;
+  /* Magenta - Highlights */
+  --color-accent-brown: #be643c;
+
+
+
+  font-family: Consolas, monospace;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: var(--color-text-default);
+  background-color: var(--color-bg-default);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+
+
+}
