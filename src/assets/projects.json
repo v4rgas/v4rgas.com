@@ -15,5 +15,10 @@
         "name": "PicoHero",
         "readmeUrl": "https://raw.githubusercontent.com/v4rgas/PicoHero/main/README.md",
         "repoUrl": "https://github.com/v4rgas/PicoHero"
+    },
+    {
+        "name": "About Me",
+        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/v4rgas/refs/heads/main/README.md",
+        "repoUrl": "https://github.com/v4rgas"
     }
 ]
