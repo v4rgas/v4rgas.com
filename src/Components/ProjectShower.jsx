@@ -6,12 +6,9 @@ import Markdown from 'preact-markdown';
 import useGithubFetcher from '../useGithubFetcher';
 
 export default function ProjectShower({ project }) {
-    // get project markdown
     const [projectMarkdown, setProjectMarkdown] = useState('')
 
     const { getProjectReadme } = useGithubFetcher()
-
-
 
     const getProjectMarkdown = async () => {
         const data = await getProjectReadme(project)

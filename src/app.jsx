@@ -8,7 +8,7 @@ import { useState } from 'preact/hooks'
 
 export function App() {
 
-  const [selectedProject, setSelectedProject] = useState('SortEm')
+  const [selectedProject, setSelectedProject] = useState('About Me')
 
   return (
     <main className='flex'>
