@@ -10,7 +10,7 @@ export function App() {
 
   return (
     <main className='flex'>
-      <Topbar user={'juan@github'} route={'/home/juan'} folder={'Projects'} />
+      <Topbar user={'v4rgas@github'} route={'/home/v4rgas'} folder={'Projects'} />
       <div className="dir-grid">
         <DirBar dirs={['sortEm', 's', 'asd']} />
         <ProjectShower project={{ name: 'SortEm', description: 'A cool game' }} />
