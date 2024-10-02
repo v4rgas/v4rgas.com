@@ -5,3 +5,15 @@
 }
 
 .project-md {}
+
+.links {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.links a {
+    /* text-decoration: none; */
+    color: var(--color-accent-orange);
+    font-weight: bold;
+}

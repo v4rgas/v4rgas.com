@@ -1,0 +1,19 @@
+[
+    {
+        "name": "SortEm",
+        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/sortEm/main/README.md",
+        "demoUrl": "https://v4rgas.github.io/sortEm/",
+        "repoUrl": "https://github.com/v4rgas/sortEm"
+    },
+    {
+        "name": "HairlessLifting",
+        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/HairlessLifting/main/README.md",
+        "demoUrl": "https://v4rgas.github.io/HairlessLifting/",
+        "repoUrl": "https://github.com/v4rgas/HairlessLifting"
+    },
+    {
+        "name": "PicoHero",
+        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/PicoHero/main/README.md",
+        "repoUrl": "https://github.com/v4rgas/PicoHero"
+    }
+]

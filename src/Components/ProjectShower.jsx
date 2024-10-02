@@ -3,23 +3,32 @@ import './ProjectShower.css';
 import { useEffect, useState } from 'preact/hooks';
 
 import Markdown from 'preact-markdown';
+import useGithubFetcher from '../useGithubFetcher';
 
 export default function ProjectShower({ project }) {
     // get project markdown
     const [projectMarkdown, setProjectMarkdown] = useState('')
 
+    const { getProjectReadme } = useGithubFetcher()
+
+
+
     const getProjectMarkdown = async () => {
-        const response = await fetch(`https://raw.githubusercontent.com/v4rgas/sortEm/refs/heads/main/README.md`)
-        const data = await response.text()
+        const data = await getProjectReadme(project)
         setProjectMarkdown(data)
     }
 
     useEffect(() => {
-        getProjectMarkdown()
-    }, [])
+        if (project)
+            getProjectMarkdown()
+    }, [project])
 
     return (
         <div className='project-shower'>
+            <span className='links'>
+                {project.demoUrl && <a href={project.demoUrl} target='_blank' rel='noreferrer'> {"Link to Demo"} </a>}
+                <a href={project.repoUrl} target='_blank' rel='noreferrer'> {"Link to Code"}</a>
+            </span>
             <span className='project-md'>
                 <Markdown markdown={projectMarkdown} markedOpts={{ gfm: true }} />
             </span>

@@ -3,6 +3,12 @@
     flex-direction: column;
 }
 
+.dir-bar button {
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+
 .selected-dir {
     background-color: var(--color-accent-blue);
     color: var(--color-bg-default);
@@ -11,4 +17,5 @@
 
 .unselected-dir {
     font-weight: bolder;
+    background-color: var(--color-bg-default);
 }

@@ -1,13 +1,25 @@
 import './DirBar.css';
 
-export default function DirBar({ dirs }) {
-    const selectedDir = 0
+export default function DirBar({ dirs, selectedDir, onSelectDir }) {
+    const DOWN_KEYS = ['ArrowDown', 'j', 'J']
+    const UP_KEYS = ['ArrowUp', 'k', 'K']
+    window.addEventListener('keydown', (e) => {
+        const index = dirs.indexOf(selectedDir)
+        if (DOWN_KEYS.includes(e.key))
+            onSelectDir(dirs[(index + 1) % dirs.length])
+        else if (UP_KEYS.includes(e.key))
+            onSelectDir(dirs[(index - 1) % dirs.length])
+
+    }
+    )
+
     return (
         <div className='dir-bar'>
             {dirs.map((dir, index) => (
-                <span key={index} className={selectedDir == index ? 'selected-dir' : 'unselected-dir'}>
+                <button key={index} className={dir == selectedDir ? 'selected-dir' : 'unselected-dir'}
+                    onClick={() => onSelectDir(dir)}>
                     {dir}
-                </span>
+                </button>
             ))}
         </div>
     )
