@@ -31,6 +31,7 @@ export default function DirBar({ dirs, selectedDir, onSelectDir }) {
                     {dir}
                 </button>
             ))}
+            <span className='instruction'>you can navigate using j and k</span>
         </div>
     )
 }
