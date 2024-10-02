@@ -14,5 +14,12 @@
 .links a {
     /* text-decoration: none; */
     color: var(--color-accent-orange);
-    font-weight: bold;
+}
+
+img {
+    @media (max-width: 768px) {
+        max-width: 100%;
+    }
+
+
 }

@@ -16,6 +16,7 @@ export default function ProjectShower({ project }) {
     const getProjectMarkdown = async () => {
         const data = await getProjectReadme(project)
         setProjectMarkdown(data)
+        // console.log(data)
     }
 
     useEffect(() => {
