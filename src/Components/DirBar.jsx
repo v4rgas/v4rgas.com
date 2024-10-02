@@ -8,7 +8,7 @@ export default function DirBar({ dirs, selectedDir, onSelectDir }) {
         if (DOWN_KEYS.includes(e.key))
             onSelectDir(dirs[(index + 1) % dirs.length])
         else if (UP_KEYS.includes(e.key))
-            onSelectDir(dirs[(index - 1) % dirs.length])
+            onSelectDir(dirs[(index + dirs.length - 1) % dirs.length])
 
     }
     )
