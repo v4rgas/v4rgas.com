@@ -13,11 +13,11 @@
     background-color: var(--color-accent-blue);
     color: var(--color-bg-default);
     font-weight: bold;
-    font-size: large;
+    padding: 10px;
 }
 
 .unselected-dir {
     font-weight: bolder;
     background-color: var(--color-bg-default);
-    font-size: large;
+    padding: 10px;
 }

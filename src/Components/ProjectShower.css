@@ -1,7 +1,6 @@
 .project-shower {
     display: flex;
     flex-direction: column;
-    padding: 20px;
 }
 
 .project-md {}
