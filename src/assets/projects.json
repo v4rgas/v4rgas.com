@@ -26,5 +26,10 @@
         "readmeUrl": "https://raw.githubusercontent.com/v4rgas/talk2me/main/README.md",
         "demoUrl": "https://v4rgas.github.io/talk2me/",
         "repoUrl": "https://github.com/v4rgas/talk2me"
+    },
+    {
+        "name": "Whack It!",
+        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/whack-it/main/README.md",
+        "repoUrl": "https://github.com/v4rgas/whack-it"
     }
 ]
