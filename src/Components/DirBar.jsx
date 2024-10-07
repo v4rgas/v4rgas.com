@@ -21,6 +21,15 @@ export default function DirBar({ dirs, selectedDir, onSelectDir }) {
         }, [selectedDir])
 
 
+    const getRandDir = () => {
+        let randIndex;
+        do {
+            randIndex = Math.floor(Math.random() * dirs.length)
+        } while (dirs[randIndex] == selectedDir)
+
+        onSelectDir(dirs[randIndex])
+    }
+
 
 
     return (
@@ -31,6 +40,7 @@ export default function DirBar({ dirs, selectedDir, onSelectDir }) {
                     {dir}
                 </button>
             ))}
+            <button className='unselected-dir' onClick={getRandDir}>Halting Problem Solver</button>
             <span className='instruction'>you can navigate using j and k</span>
         </div>
     )
