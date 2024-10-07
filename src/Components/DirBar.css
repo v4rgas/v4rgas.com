@@ -1,6 +1,12 @@
 .dir-bar {
     display: flex;
     flex-direction: column;
+
+    @media screen and (max-width: 768px) {
+        flex-direction: row;
+    }
+
+    flex-wrap: wrap;
 }
 
 .dir-bar button {
