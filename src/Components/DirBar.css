@@ -13,6 +13,7 @@
     border: none;
     cursor: pointer;
     text-align: left;
+    height: 3rem;
 }
 
 .selected-dir {
