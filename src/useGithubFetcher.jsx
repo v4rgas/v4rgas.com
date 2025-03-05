@@ -1,12 +1,10 @@
-import { useEffect, useState } from "preact/hooks"
+import { useEffect } from "preact/hooks"
 
 import PROJECTS from "./assets/projects.json"
 
 const cache = new Map()
 
 const useGithubFetcher = () => {
-    // const [fetchCache, setFetchCache] = useState({})
-
     function fetchText(url) {
         if (cache.has(url)) {
             console.log('fetching from cache')
@@ -17,8 +15,18 @@ const useGithubFetcher = () => {
             .then(response => response.text())
             .then(text => {
                 cache.set(url, text)
+                preloadImages(text)
                 return text
             })
+    }
+
+    function preloadImages(text) {
+        const imageRegex = /!\[.*?\]\((.*?)\)/g
+        const imageUrls = Array.from(text.matchAll(imageRegex), match => match[1])
+        imageUrls.forEach(url => {
+            const img = new Image()
+            img.src = url
+        })
     }
 
     useEffect(() => {
@@ -32,7 +40,6 @@ const useGithubFetcher = () => {
     }
 
     return { getProjectReadme }
-
 }
 
 export default useGithubFetcher
