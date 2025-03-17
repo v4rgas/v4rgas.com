@@ -24,8 +24,8 @@ export default function ProjectShower({ project }) {
     return (
         <div className='project-shower'>
             <span className='links'>
-                {project.demoUrl && <a href={project.demoUrl} target='_blank' rel='noreferrer'> {"Link to Demo"} </a>}
-                <a href={project.repoUrl} target='_blank' rel='noreferrer'> {"Link to Code"}</a>
+                {project.demoUrl && <a href={project.demoUrl} target='_blank' rel='noreferrer'> {"Link to demo"} </a>}
+                <a href={project.repoUrl} target='_blank' rel='noreferrer'> {"Link to repo"}</a>
             </span>
             <span className='project-md'>
                 <Markdown markdown={projectMarkdown} markedOpts={{ gfm: true }} />
