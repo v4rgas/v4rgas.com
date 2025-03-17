@@ -5,6 +5,11 @@
         "repoUrl": "https://github.com/v4rgas"
     },
     {
+        "name": "blarify",
+        "readmeUrl": "https://raw.githubusercontent.com/blarApp/blarify/refs/heads/main/README.md",
+        "repoUrl": "https://github.com/blarApp/blarify"
+    }
+    {
         "name": "SortEm",
         "readmeUrl": "https://raw.githubusercontent.com/v4rgas/sortEm/main/README.md",
         "demoUrl": "https://v4rgas.github.io/sortEm/",
