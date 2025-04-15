@@ -30,6 +30,7 @@
 .unselected-dir {
     font-weight: bolder;
     background-color: var(--color-bg-default);
+    color: white;
     padding: 10px;
 }
 
