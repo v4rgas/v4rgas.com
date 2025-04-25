@@ -14,7 +14,7 @@ export function App() {
   return (
     <Terminal>
     <main className='flex'>
-      <Topbar user={'v4rgas@github'} route={'/home/v4rgas'} folder={'Projects'} />
+      <Topbar user={'v4rgas@github'} route={'/home/v4rgas'} folder={selectedProject.replace(/\s+/g, '-').toLowerCase()} />
       <div className="dir-grid">
         <DirBar dirs={PAGES} selectedDir={selectedProject} onSelectDir={(name) => {
           setSelectedProject(name)
