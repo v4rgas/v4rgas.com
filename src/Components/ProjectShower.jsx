@@ -1,35 +1,22 @@
 import './ProjectShower.css';
 
-import { useEffect, useState } from 'preact/hooks';
-
-import Markdown from 'preact-markdown';
-import useGithubFetcher from '../useGithubFetcher';
+import { useState } from 'preact/hooks';
+import AboutMe from './Pages/AboutMe';
+import { useEffect } from 'preact/hooks';
+import Projects from './Pages/Projects';
 
 export default function ProjectShower({ project }) {
-    const [projectMarkdown, setProjectMarkdown] = useState('')
-
-    const { getProjectReadme } = useGithubFetcher()
-
-    const getProjectMarkdown = async () => {
-        const data = await getProjectReadme(project)
-        setProjectMarkdown(data)
-        // console.log(data)
-    }
+    const [selectedProject, setSelectedProject] = useState(project);
 
     useEffect(() => {
-        if (project)
-            getProjectMarkdown()
-    }, [project])
+        setSelectedProject(project);
+    }, [project]);
 
     return (
         <div className='project-shower'>
-            <span className='links'>
-                {project.demoUrl && <a href={project.demoUrl} target='_blank' rel='noreferrer'> {"Link to demo"} </a>}
-                <a href={project.repoUrl} target='_blank' rel='noreferrer'> {"Link to repo"}</a>
-            </span>
-            <span className='project-md'>
-                <Markdown markdown={projectMarkdown} markedOpts={{ gfm: true }} />
-            </span>
+            {selectedProject === 'About Me' && <AboutMe />}
+            {selectedProject === 'Projects' && <Projects />}
+            {!selectedProject && <div>Welcome! Please select a page.</div>}
         </div>
-    )
+    );
 }

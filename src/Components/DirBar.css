@@ -1,16 +1,19 @@
 .dir-bar {
     display: flex;
     flex-direction: column;
-    width: 300px;
+    width: max-content;
+    height: 100%;
 
     @media screen and (max-width: 768px) {
         flex-direction: row;
         width: 100%;
     }
 
+    border: var(--color-border) 1px solid;
+
     flex-wrap: wrap;
 
-    
+
 }
 
 .dir-bar button {
@@ -18,17 +21,16 @@
     cursor: pointer;
     text-align: left;
     height: 3rem;
+    border-bottom: var(--color-border) 1px solid;
 }
 
 .selected-dir {
-    background-color: var(--color-accent-blue);
-    color: var(--color-bg-default);
-    font-weight: bold;
+    background-color: var(--color-bg-selection);
     padding: 10px;
+    font-weight: bold;
 }
 
 .unselected-dir {
-    font-weight: bolder;
     background-color: var(--color-bg-default);
     color: white;
     padding: 10px;
@@ -37,11 +39,13 @@
 .instruction {
     color: var(--color-text-muted);
     font-size: 0.8rem;
-    margin-top: 0.5rem;
     text-align: center;
+    margin: 1rem;
 
     @media screen and (max-width: 768px) {
         font-size: 0rem;
         margin: 0;
     }
+
+
 }

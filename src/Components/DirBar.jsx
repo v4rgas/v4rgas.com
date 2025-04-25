@@ -41,7 +41,7 @@ export default function DirBar({ dirs, selectedDir, onSelectDir }) {
                 </button>
             ))}
             <button className='unselected-dir' onClick={getRandDir}>Halting Problem Solver</button>
-            <span className='instruction'>you can navigate using j and k</span>
+            <span className='instruction'> you can navigate using j and k </span>
         </div>
     )
 }

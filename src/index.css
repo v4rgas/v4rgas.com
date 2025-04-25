@@ -40,10 +40,9 @@
   /* Magenta - Highlights */
   --color-accent-brown: #be643c;
 
+  --color-border: #505050;
 
-
-  font-family: "Ubuntu Mono", monospace;
-  font-weight: 400;
+  font-family: 'IBM Plex Mono', monospace;
   color: white;
 
   color-scheme: dark light;

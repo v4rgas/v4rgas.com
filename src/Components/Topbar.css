@@ -1,7 +1,6 @@
 .topbar {
     text-align: left;
     width: 100%;
-    /* font-size: large; */
     padding-bottom: 0.5rem;
 }
 
@@ -16,5 +15,3 @@
 .folder {
     font-weight: 900;
 }
-
-font-size: large;

@@ -1,40 +1,48 @@
 [
     {
-        "name": "About Me",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/v4rgas/main/README.md",
-        "repoUrl": "https://github.com/v4rgas"
+      "name": "Blarify",
+      "readmeUrl": "https://raw.githubusercontent.com/blarApp/blarify/refs/heads/main/README.md",
+      "repoUrl": "https://github.com/blarApp/blarify",
+      "description": "Transforms code into a graph structure for LLMs to analyze and traverse.",
+      "emoji": "🧠"
     },
     {
-        "name": "Blarify",
-        "readmeUrl": "https://raw.githubusercontent.com/blarApp/blarify/refs/heads/main/README.md",
-        "repoUrl": "https://github.com/blarApp/blarify"
+      "name": "SortEm",
+      "readmeUrl": "https://raw.githubusercontent.com/v4rgas/sortEm/main/README.md",
+      "demoUrl": "https://v4rgas.github.io/sortEm/",
+      "repoUrl": "https://github.com/v4rgas/sortEm",
+      "description": "A fast-paced game to sort numbers in ascending order.",
+      "emoji": "🔢"
     },
     {
-        "name": "SortEm",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/sortEm/main/README.md",
-        "demoUrl": "https://v4rgas.github.io/sortEm/",
-        "repoUrl": "https://github.com/v4rgas/sortEm"
+      "name": "Whack It!",
+      "readmeUrl": "https://raw.githubusercontent.com/v4rgas/whack-it/main/README.md",
+      "repoUrl": "https://github.com/v4rgas/whack-it",
+      "description": "ESP32-based version of Bop It! with audio and OTA updates.",
+      "emoji": "🎮"
     },
     {
-        "name": "Whack It!",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/whack-it/main/README.md",
-        "repoUrl": "https://github.com/v4rgas/whack-it"
+      "name": "HairlessLifting",
+      "readmeUrl": "https://raw.githubusercontent.com/v4rgas/HairlessLifting/main/README.md",
+      "demoUrl": "https://v4rgas.github.io/HairlessLifting/",
+      "repoUrl": "https://github.com/v4rgas/HairlessLifting",
+      "description": "Workout tracker PWA with 190+ exercises and video demos.",
+      "emoji": "🏋️"
     },
     {
-        "name": "HairlessLifting",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/HairlessLifting/main/README.md",
-        "demoUrl": "https://v4rgas.github.io/HairlessLifting/",
-        "repoUrl": "https://github.com/v4rgas/HairlessLifting"
+      "name": "PicoHero",
+      "readmeUrl": "https://raw.githubusercontent.com/v4rgas/PicoHero/main/README.md",
+      "repoUrl": "https://github.com/v4rgas/PicoHero",
+      "description": "Uses Raspberry Pi Pico to connect a Wii Guitar Hero controller to PC.",
+      "emoji": "🎸"
     },
     {
-        "name": "PicoHero",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/PicoHero/main/README.md",
-        "repoUrl": "https://github.com/v4rgas/PicoHero"
-    },
-    {
-        "name": "Talk2Me",
-        "readmeUrl": "https://raw.githubusercontent.com/v4rgas/talk2me/main/README.md",
-        "demoUrl": "https://v4rgas.github.io/talk2me/",
-        "repoUrl": "https://github.com/v4rgas/talk2me"
+      "name": "Talk2Me",
+      "readmeUrl": "https://raw.githubusercontent.com/v4rgas/talk2me/main/README.md",
+      "demoUrl": "https://v4rgas.github.io/talk2me/",
+      "repoUrl": "https://github.com/v4rgas/talk2me",
+      "description": "Accessible PWA for typing with limited input, like tap or pause buttons.",
+      "emoji": "🗣️"
     }
-]
+  ]
+  
