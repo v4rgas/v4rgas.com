@@ -9,7 +9,7 @@ import Terminal from './Terminal'
 export function App() {
 
   const [selectedProject, setSelectedProject] = useState('About Me')
-  const PAGES = ['About Me', 'Projects']
+  const PAGES = ['About Me', 'Experience', 'Projects']
 
   return (
     <Terminal>

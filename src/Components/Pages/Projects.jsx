@@ -68,9 +68,9 @@ const ProjectCard = ({ project }) => {
 
     return (
         <div style={{ border: "1px solid var(--color-border)", padding: "1rem", width: "100%", boxSizing: "border-box" }}>
-            <h3>
+            <h2>
                 {project.emoji} {project.name}
-            </h3>
+            </h2>
             <p>{project.description}</p>
             <div>
                 <a href={project.repoUrl} target="_blank" rel="noopener noreferrer">
@@ -94,12 +94,12 @@ const Projects = () => (
     <div
         style={{
             display: "flex",
-            flexWrap: "wrap",
+            flexDirection: "column",
             gap: "1rem",
-            margin: "1rem",
             justifyContent: "space-between",
         }}
     >
+        <h1>Projects</h1>
         {projects.map((project) => (
             <ProjectCard key={project.name} project={project} />
         ))}
