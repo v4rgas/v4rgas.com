@@ -1,0 +1,79 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: black;
+    color: white;
+}
+
+html, body {
+    height: 100%;
+}
+
+html {
+    display: table;
+    margin: auto;
+}
+
+body {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+
+.landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 600px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: 3rem; /* Makes icons bigger if they're font icons */
+}
+
+article {
+    width: 100%;
+    max-width: 600px;
+    margin: 1rem 0;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    text-align: center;
+    padding: 1rem;
+}
+
+.my-name {
+    font-size: 2.5rem;
+}
+#penguin {
+    width: 100px;
+    cursor: pointer;
+    position: relative;
+}
+
+@keyframes jump {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+#penguin:hover {
+    animation: jump 0.5s ease-out infinite;
+}
+
+#cv main {
+    margin: 1rem;
+}
+
