@@ -77,3 +77,9 @@ footer {
     margin: 1rem;
 }
 
+.date {
+    font-size: small;
+    font-weight: lighter;
+    color: lightgray;
+}
+
