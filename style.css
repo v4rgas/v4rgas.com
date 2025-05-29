@@ -36,6 +36,7 @@ body {
     gap: 1rem;
     margin-top: 1rem;
     font-size: 3rem; /* Makes icons bigger if they're font icons */
+    justify-content: space-evenly;
 }
 
 article {
