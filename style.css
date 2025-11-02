@@ -53,6 +53,9 @@ footer {
     width: 100px;
     cursor: pointer;
     position: relative;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
 }
 
 @keyframes jump {
@@ -64,8 +67,8 @@ footer {
     }
 }
 
-#penguin:hover {
-    animation: jump 0.5s ease-out infinite;
+#penguin.jumping {
+    animation: jump 0.5s ease-in-out;
 }
 
 #cv main {

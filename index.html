@@ -29,7 +29,6 @@
         <h1>Juan Vargas</h1>
         <address>
             <p>Building cool stuff</p>
-            <p><a href="mailto:hello@v4rgas.com">
         </address>
         
         <div class="social-icons">
@@ -44,6 +43,16 @@
         <h3>Contact Me</h3>
         <p class="email">hello@v4rgas.com</p>
     </footer>
+
+    <script>
+        const penguin = document.getElementById('penguin');
+        penguin.addEventListener('mouseenter', () => {
+            penguin.classList.add('jumping');
+        });
+        penguin.addEventListener('animationend', () => {
+            penguin.classList.remove('jumping');
+        });
+    </script>
 
 </body>
 
