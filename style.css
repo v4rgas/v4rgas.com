@@ -81,3 +81,6 @@ footer {
     color: lightgray;
 }
 
+.gutter-bottom {
+    margin-bottom: 2rem;
+}
