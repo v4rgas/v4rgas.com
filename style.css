@@ -56,6 +56,32 @@ footer {
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
+    mix-blend-mode: screen;
+}
+
+.falling-penguin {
+    position: fixed;
+    top: -100px;
+    width: 40px;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: fall linear forwards;
+    z-index: 9999;
+    will-change: transform, opacity;
+}
+
+@keyframes fall {
+    from {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(calc(100vh + 100px)) rotate(360deg);
+        opacity: 0;
+    }
 }
 
 @keyframes jump {

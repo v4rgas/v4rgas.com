@@ -46,11 +46,44 @@
 
     <script>
         const penguin = document.getElementById('penguin');
+
         penguin.addEventListener('mouseenter', () => {
             penguin.classList.add('jumping');
         });
+
         penguin.addEventListener('animationend', () => {
             penguin.classList.remove('jumping');
+        });
+
+        penguin.addEventListener('click', () => {
+            const count = 100;
+            const fragment = document.createDocumentFragment();
+
+            for (let i = 0; i < count; i++) {
+                const fallingPenguin = document.createElement('img');
+                fallingPenguin.src = 'penguin.png';
+                fallingPenguin.className = 'falling-penguin';
+
+                // Random horizontal position
+                const leftPos = Math.random() * 100;
+                fallingPenguin.style.left = leftPos + 'vw';
+
+                // Random duration between 2-4 seconds
+                const duration = Math.random() * 2 + 2;
+                fallingPenguin.style.animationDuration = duration + 's';
+
+                // Stagger start with delay
+                fallingPenguin.style.animationDelay = (i * 0.03) + 's';
+
+                fragment.appendChild(fallingPenguin);
+
+                // Remove after animation completes
+                setTimeout(() => {
+                    fallingPenguin.remove();
+                }, (duration + i * 0.03) * 1000);
+            }
+
+            document.body.appendChild(fragment);
         });
     </script>
 
