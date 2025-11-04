@@ -105,8 +105,10 @@
             };
         }
 
-        // Create falling penguins on click
-        penguin.addEventListener('click', () => {
+        // Create falling penguins on click/touch
+        function spawnPenguinRain(e) {
+            e.preventDefault(); // Prevent default touch behavior
+
             const count = 100;
             const spawnDuration = 3; // spawn over 3 seconds
             const delay = spawnDuration / count;
@@ -122,7 +124,10 @@
 
             // Start animation loop if not already running
             startAnimation();
-        });
+        }
+
+        penguin.addEventListener('click', spawnPenguinRain);
+        penguin.addEventListener('touchend', spawnPenguinRain);
 
         // Animation loop
         let lastTime = performance.now();
@@ -220,10 +225,7 @@
             }
         }
 
-        // Start animation loop once image is loaded
-        penguinImg.onload = () => {
-            requestAnimationFrame(animate);
-        };
+        // Image is preloaded and ready to use when clicked
     </script>
 
 </body>
