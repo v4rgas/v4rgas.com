@@ -25,7 +25,7 @@
 <body id="home">
 
     <main class="landing">
-        <img id="penguin" src="penguin.png" alt="Juan Vargas" class="profile-image">
+        <img id="penguin" src="penguin-with-bg.png" alt="Juan Vargas" class="profile-image">
         <h1>Juan Vargas</h1>
         <address>
             <p>Building cool stuff</p>
@@ -44,9 +44,58 @@
         <p class="email">hello@v4rgas.com</p>
     </footer>
 
+    <canvas id="penguinCanvas"></canvas>
+
     <script>
         const penguin = document.getElementById('penguin');
+        const canvas = document.getElementById('penguinCanvas');
+        const ctx = canvas.getContext('2d');
 
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Preload penguin image
+        const penguinImg = new Image();
+        penguinImg.src = 'penguin.png';
+
+        // Penguin particles array
+        let fallingPenguins = [];
+
+        // Gravity direction (can be tilted)
+        let gravityX = 0;
+        let gravityY = 400;
+
+        // Device orientation support
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', (event) => {
+                // beta: front-to-back tilt (-180 to 180)
+                // gamma: left-to-right tilt (-90 to 90)
+                const tiltLR = event.gamma; // left-right tilt
+                const tiltFB = event.beta;  // front-back tilt
+
+                // Convert tilt to gravity (gamma: -90 to 90 degrees)
+                gravityX = (tiltLR / 90) * 400; // max 400 pixels/s^2 sideways
+                gravityY = 400; // always pull down at base rate
+            });
+        }
+
+        // Keyboard controls for desktop
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') {
+                gravityX = Math.max(gravityX - 50, -400);
+            } else if (event.key === 'ArrowRight') {
+                gravityX = Math.min(gravityX + 50, 400);
+            } else if (event.key === 'ArrowDown') {
+                gravityX = 0; // reset to center
+            }
+        });
+
+        // Penguin jump animation
         penguin.addEventListener('mouseenter', () => {
             penguin.classList.add('jumping');
         });
@@ -55,36 +104,110 @@
             penguin.classList.remove('jumping');
         });
 
+        // Create falling penguins on click
         penguin.addEventListener('click', () => {
             const count = 100;
-            const fragment = document.createDocumentFragment();
+            const spawnDuration = 3; // spawn over 3 seconds
+            const delay = spawnDuration / count;
 
             for (let i = 0; i < count; i++) {
-                const fallingPenguin = document.createElement('img');
-                fallingPenguin.src = 'penguin.png';
-                fallingPenguin.className = 'falling-penguin';
-
-                // Random horizontal position
-                const leftPos = Math.random() * 100;
-                fallingPenguin.style.left = leftPos + 'vw';
-
-                // Random duration between 2-4 seconds
-                const duration = Math.random() * 2 + 2;
-                fallingPenguin.style.animationDuration = duration + 's';
-
-                // Stagger start with delay
-                fallingPenguin.style.animationDelay = (i * 0.03) + 's';
-
-                fragment.appendChild(fallingPenguin);
-
-                // Remove after animation completes
                 setTimeout(() => {
-                    fallingPenguin.remove();
-                }, (duration + i * 0.03) * 1000);
+                    fallingPenguins.push({
+                        x: Math.random() * canvas.width,
+                        y: -100,
+                        rotation: 0,
+                        velocityY: 200 + Math.random() * 100,
+                        velocityX: 0, // horizontal velocity
+                        rotationSpeed: 90 + Math.random() * 180, // degrees per second
+                        opacity: 1,
+                        age: 0,
+                        bounceCount: 0,
+                        maxBounces: 3 + Math.floor(Math.random() * 3), // random bounces between 3-5
+                        restitution: 0.3 + Math.random() * 0.2, // energy retained per bounce (30-50%)
+                        fallingOut: false
+                    });
+                }, i * delay * 1000);
             }
-
-            document.body.appendChild(fragment);
         });
+
+        // Animation loop
+        let lastTime = performance.now();
+        function animate(currentTime) {
+            const deltaTime = (currentTime - lastTime) / 1000; // convert to seconds
+            lastTime = currentTime;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw penguins
+            fallingPenguins = fallingPenguins.filter(p => {
+                // Update age
+                p.age += deltaTime;
+
+                // Only animate if age is positive (handles stagger)
+                if (p.age < 0) return true;
+
+                // Apply gravity in both directions
+                p.velocityY += gravityY * deltaTime;
+                p.velocityX += gravityX * deltaTime;
+
+                // Update position and rotation
+                p.y += p.velocityY * deltaTime;
+                p.x += p.velocityX * deltaTime;
+                p.rotation += p.rotationSpeed * deltaTime;
+
+                // Bounce physics at bottom
+                if (!p.fallingOut && p.y >= canvas.height - 20) {
+                    p.y = canvas.height - 20;
+                    p.bounceCount++;
+
+                    // Check if reached max bounces
+                    if (p.bounceCount >= p.maxBounces) {
+                        p.fallingOut = true;
+                        p.velocityY = 200; // fall through the screen
+                        p.velocityX += (Math.random() - 0.5) * 100;
+                    } else {
+                        p.velocityY = -p.velocityY * p.restitution; // reverse and reduce velocity
+                        p.velocityX += (Math.random() - 0.5) * 200; // random horizontal velocity -100 to 100
+                    }
+                }
+
+                // Bounce physics at sides
+                if (p.x < 20) {
+                    p.x = 20;
+                    p.velocityX = Math.abs(p.velocityX) * 0.5; // bounce back with dampening
+                } else if (p.x > canvas.width - 20) {
+                    p.x = canvas.width - 20;
+                    p.velocityX = -Math.abs(p.velocityX) * 0.5; // bounce back with dampening
+                }
+
+                // Remove if fell off screen
+                if (p.fallingOut && p.y > canvas.height + 100) {
+                    return false;
+                }
+
+                // Draw penguin
+                ctx.save();
+                ctx.globalAlpha = p.opacity;
+                ctx.globalCompositeOperation = 'screen';
+
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+
+                // Draw at consistent size
+                ctx.drawImage(penguinImg, -20, -20, 40, 40);
+                ctx.restore();
+
+                return true;
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Start animation loop once image is loaded
+        penguinImg.onload = () => {
+            requestAnimationFrame(animate);
+        };
     </script>
 
 </body>
