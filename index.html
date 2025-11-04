@@ -87,6 +87,7 @@
 
         // Spawn queue for time-based penguin creation
         let spawnQueue = [];
+        let nextAvailableSpawnTime = 0;
 
         function createPenguin() {
             return {
@@ -113,14 +114,19 @@
             const spawnDuration = 3; // spawn over 3 seconds
             const delay = spawnDuration / count;
 
-            // Queue penguins with their spawn times
-            const startTime = performance.now() / 1000;
+            // Queue penguins starting from the next available spawn time
+            const currentTime = performance.now() / 1000;
+            const startTime = Math.max(currentTime, nextAvailableSpawnTime);
+
             for (let i = 0; i < count; i++) {
                 spawnQueue.push({
                     spawnTime: startTime + (i * delay),
                     penguin: createPenguin()
                 });
             }
+
+            // Update next available spawn time so clicks don't overlap
+            nextAvailableSpawnTime = startTime + spawnDuration;
 
             // Start animation loop if not already running
             startAnimation();
