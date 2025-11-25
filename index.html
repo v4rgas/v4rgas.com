@@ -67,7 +67,7 @@
 
         // Preload penguin image
         const penguinImg = new Image();
-        penguinImg.src = 'penguin.png';
+        penguinImg.src = 'penguin.svg';
 
         // Penguin particles array
         let fallingPenguins = [];
@@ -133,7 +133,10 @@
         }
 
         penguin.addEventListener('click', spawnPenguinRain);
-        penguin.addEventListener('touchend', spawnPenguinRain);
+        penguin.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent synthetic click and double-fire
+            spawnPenguinRain(e);
+        });
 
         // Animation loop
         let lastTime = performance.now();
