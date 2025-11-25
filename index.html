@@ -52,190 +52,111 @@
         const canvas = document.getElementById('penguinCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Set canvas size
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
         resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-        // Debounce resize handler
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(resizeCanvas, 150);
-        });
-
-        // Preload penguin image
         const penguinImg = new Image();
         penguinImg.src = 'penguin.svg';
 
-        // Penguin particles array
-        let fallingPenguins = [];
+        let isAnimating = false;
+        let trajectories = [];
 
-        // Gravity constants
-        const gravityX = 0;
-        const gravityY = 400;
+        // Precalculate trajectory for one penguin (simple fall + bounce)
+        function precalculateTrajectory(startX, startDelay) {
+            const frames = [];
+            const fps = 60;
+            const dt = 1 / fps;
+            const gravity = 200;
+            const groundY = canvas.height - 20;
 
-        // Penguin jump animation
-        penguin.addEventListener('mouseenter', () => {
-            penguin.classList.add('jumping');
-        });
+            let x = startX;
+            let y = -40;
+            let vx = (Math.random() - 0.5) * 50;
+            let vy = 100 + Math.random() * 50;
+            let rotation = 0;
+            let rotationSpeed = 90 + Math.random() * 180;
+            let bounces = 0;
+            const maxBounces = 2 + Math.floor(Math.random() * 2);
+            const restitution = 0.4;
 
-        penguin.addEventListener('animationend', () => {
-            penguin.classList.remove('jumping');
-        });
+            // Add delay frames
+            for (let i = 0; i < startDelay * fps; i++) {
+                frames.push(null);
+            }
 
-        // Spawn queue for time-based penguin creation
-        let spawnQueue = [];
-        let nextAvailableSpawnTime = 0;
+            // Simulate until off screen
+            while (y < canvas.height + 100) {
+                vy += gravity * dt;
+                y += vy * dt;
+                x += vx * dt;
+                rotation += rotationSpeed * dt;
 
-        function createPenguin() {
-            return {
-                x: Math.random() * canvas.width,
-                y: -100,
-                rotation: 0,
-                velocityY: 200 + Math.random() * 100,
-                velocityX: 0,
-                rotationSpeed: 90 + Math.random() * 180,
-                opacity: 1,
-                age: 0,
-                bounceCount: 0,
-                maxBounces: 3 + Math.floor(Math.random() * 3),
-                restitution: 0.3 + Math.random() * 0.2,
-                fallingOut: false
-            };
+                if (y >= groundY && bounces < maxBounces) {
+                    y = groundY;
+                    vy = -vy * restitution;
+                    vx += (Math.random() - 0.5) * 100;
+                    bounces++;
+                }
+
+                frames.push({ x, y, rotation });
+            }
+
+            return frames;
         }
 
-        // Create falling penguins on click/touch
         function spawnPenguinRain(e) {
-            e.preventDefault(); // Prevent default touch behavior
+            e.preventDefault();
+            if (isAnimating) return;
 
-            const count = 100;
-            const spawnDuration = 3; // spawn over 3 seconds
-            const delay = spawnDuration / count;
+            isAnimating = true;
+            trajectories = [];
 
-            // Queue penguins starting from the next available spawn time
-            const currentTime = performance.now() / 1000;
-            const startTime = Math.max(currentTime, nextAvailableSpawnTime);
-
+            const count = 80;
             for (let i = 0; i < count; i++) {
-                spawnQueue.push({
-                    spawnTime: startTime + (i * delay),
-                    penguin: createPenguin()
-                });
+                const startX = Math.random() * canvas.width;
+                const delay = (i / count) * 2; // stagger over 2 seconds
+                trajectories.push(precalculateTrajectory(startX, delay));
             }
 
-            // Update next available spawn time so clicks don't overlap
-            nextAvailableSpawnTime = startTime + spawnDuration;
+            let frame = 0;
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'screen';
 
-            // Start animation loop if not already running
-            startAnimation();
-        }
-
-        penguin.addEventListener('click', spawnPenguinRain);
-        penguin.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent synthetic click and double-fire
-            spawnPenguinRain(e);
-        });
-
-        // Animation loop
-        let lastTime = performance.now();
-        let animationFrameId = null;
-
-        function animate(currentTime) {
-            const deltaTime = (currentTime - lastTime) / 1000; // convert to seconds
-            lastTime = currentTime;
-            const currentTimeSeconds = currentTime / 1000;
-
-            // Process spawn queue
-            while (spawnQueue.length > 0 && spawnQueue[0].spawnTime <= currentTimeSeconds) {
-                fallingPenguins.push(spawnQueue.shift().penguin);
-            }
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Set composite operation once for all penguins
-            ctx.globalCompositeOperation = 'screen';
-
-            // Update and draw penguins
-            fallingPenguins = fallingPenguins.filter(p => {
-                // Update age
-                p.age += deltaTime;
-
-                // Only animate if age is positive (handles stagger)
-                if (p.age < 0) return true;
-
-                // Apply gravity in both directions
-                p.velocityY += gravityY * deltaTime;
-                p.velocityX += gravityX * deltaTime;
-
-                // Update position and rotation
-                p.y += p.velocityY * deltaTime;
-                p.x += p.velocityX * deltaTime;
-                p.rotation += p.rotationSpeed * deltaTime;
-
-                // Bounce physics at bottom
-                if (!p.fallingOut && p.y >= canvas.height - 20) {
-                    p.y = canvas.height - 20;
-                    p.bounceCount++;
-
-                    // Check if reached max bounces
-                    if (p.bounceCount >= p.maxBounces) {
-                        p.fallingOut = true;
-                        p.velocityY = 200; // fall through the screen
-                        p.velocityX += (Math.random() - 0.5) * 100;
-                    } else {
-                        p.velocityY = -p.velocityY * p.restitution; // reverse and reduce velocity
-                        p.velocityX += (Math.random() - 0.5) * 200; // random horizontal velocity -100 to 100
+                let activeCount = 0;
+                for (const traj of trajectories) {
+                    const pos = traj[frame];
+                    if (pos) {
+                        ctx.save();
+                        ctx.translate(pos.x, pos.y);
+                        ctx.rotate(pos.rotation * Math.PI / 180);
+                        ctx.drawImage(penguinImg, -20, -20, 40, 40);
+                        ctx.restore();
+                        activeCount++;
+                    } else if (frame < traj.length) {
+                        activeCount++;
                     }
                 }
 
-                // Bounce physics at sides
-                if (p.x < 20) {
-                    p.x = 20;
-                    p.velocityX = Math.abs(p.velocityX) * 0.5; // bounce back with dampening
-                } else if (p.x > canvas.width - 20) {
-                    p.x = canvas.width - 20;
-                    p.velocityX = -Math.abs(p.velocityX) * 0.5; // bounce back with dampening
+                frame++;
+                if (activeCount > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isAnimating = false;
                 }
-
-                // Remove if fell off screen
-                if (p.fallingOut && p.y > canvas.height + 100) {
-                    return false;
-                }
-
-                // Draw penguin
-                ctx.save();
-                ctx.globalAlpha = p.opacity;
-
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation * Math.PI / 180);
-
-                // Draw at consistent size
-                ctx.drawImage(penguinImg, -20, -20, 40, 40);
-                ctx.restore();
-
-                return true;
-            });
-
-            // Only continue animation if there are particles to render
-            if (fallingPenguins.length > 0) {
-                animationFrameId = requestAnimationFrame(animate);
-            } else {
-                animationFrameId = null;
             }
+
+            requestAnimationFrame(animate);
         }
 
-        function startAnimation() {
-            if (animationFrameId === null) {
-                lastTime = performance.now();
-                animationFrameId = requestAnimationFrame(animate);
-            }
-        }
-
-        // Image is preloaded and ready to use when clicked
+        penguin.addEventListener('mouseenter', () => penguin.classList.add('jumping'));
+        penguin.addEventListener('animationend', () => penguin.classList.remove('jumping'));
+        penguin.addEventListener('click', spawnPenguinRain);
+        penguin.addEventListener('touchstart', spawnPenguinRain, { passive: false });
     </script>
 
 </body>

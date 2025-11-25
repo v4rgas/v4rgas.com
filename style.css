@@ -3,11 +3,15 @@
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background-color: black;
     color: white;
 }
 
+a {
+    cursor: pointer;
+}
+
 body {
+    background-color: black;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -31,6 +35,15 @@ body {
     margin-top: 1rem;
     font-size: 3rem; /* Makes icons bigger if they're font icons */
     justify-content: space-evenly;
+}
+
+.social-icons a {
+    display: inline-block;
+    cursor: pointer;
+}
+
+.social-icons a:hover {
+    cursor: pointer;
 }
 
 article {
