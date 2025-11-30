@@ -1,0 +1,24 @@
+{
+  "name": "v4rgas.com",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/v4rgas/v4rgas.com.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/v4rgas/v4rgas.com/issues"
+  },
+  "homepage": "https://github.com/v4rgas/v4rgas.com#readme",
+  "description": "",
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "html-minifier-terser": "^7.2.0"
+  }
+}

@@ -68,12 +68,11 @@ footer {
 }
 #penguin {
     width: 150px;
+    height: 150px;
     cursor: pointer;
-    position: relative;
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
     image-rendering: crisp-edges;
-    mix-blend-mode: screen;
 }
 
 #penguinCanvas {

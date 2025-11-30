@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://v4rgas.com/sitemap.xml
