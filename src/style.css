@@ -68,7 +68,6 @@ footer {
 }
 #penguin {
     width: 150px;
-    height: 150px;
     cursor: pointer;
     image-rendering: pixelated;
     image-rendering: -moz-crisp-edges;
