@@ -52,7 +52,7 @@
 
     <footer class="contact-section">
         <h3>Contact Me</h3>
-        <p class="email">hello@v4rgas.com</p>
+        <p class="email" id="email"></p>
     </footer>
 
     <canvas id="penguinCanvas"></canvas>
@@ -168,6 +168,9 @@
         penguin.addEventListener('animationend', () => penguin.classList.remove('jumping'));
         penguin.addEventListener('click', spawnPenguinRain);
         penguin.addEventListener('touchstart', spawnPenguinRain, { passive: false });
+
+        // Email obfuscation (prevents Cloudflare injection)
+        document.getElementById('email').textContent = ['hello', 'v4rgas.com'].join('@');
     </script>
 
 </body>
