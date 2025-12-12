@@ -72,92 +72,39 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
-        // === Barnes-Hut N-Body Simulation ===
-        const THETA = 0.7; // Barnes-Hut threshold (higher = faster but less accurate)
-        const G = 800; // Gravitational constant
-        const SOFTENING = 20; // Prevent extreme forces at close range
-        const DAMPING = 0.9995; // Slight velocity damping
+        // === Optimized N-Body Simulation with Typed Arrays ===
+        const G = 800;
+        const SOFTENING_SQ = 400; // 20^2 pre-computed
+        const DAMPING = 0.9995;
         const PENGUIN_COUNT = 150;
         const PENGUIN_SIZE = 28;
+        const SUN_MASS = 5000;
+        const EXPLODE_RADIUS_SQ = 2500; // 50^2
 
-        let bodies = [];
-        let explosions = [];
+        // Typed arrays for better perf (x, y, vx, vy, mass, size, spawnAt, dead)
+        const MAX_BODIES = 2000;
+        const px = new Float32Array(MAX_BODIES);
+        const py = new Float32Array(MAX_BODIES);
+        const vx = new Float32Array(MAX_BODIES);
+        const vy = new Float32Array(MAX_BODIES);
+        const mass = new Float32Array(MAX_BODIES);
+        const size = new Float32Array(MAX_BODIES);
+        const spawnAt = new Float32Array(MAX_BODIES);
+        const dead = new Uint8Array(MAX_BODIES);
+
+        // Explosion particles (simpler, just visual)
+        const MAX_PARTICLES = 500;
+        const epx = new Float32Array(MAX_PARTICLES);
+        const epy = new Float32Array(MAX_PARTICLES);
+        const evx = new Float32Array(MAX_PARTICLES);
+        const evy = new Float32Array(MAX_PARTICLES);
+        const elife = new Float32Array(MAX_PARTICLES);
+        const esize = new Float32Array(MAX_PARTICLES);
+        let particleCount = 0;
+
+        let bodyCount = 0;
         let isAnimating = false;
         let sunX, sunY;
-
-        // Quadtree node for Barnes-Hut
-        class QuadNode {
-            constructor(x, y, size) {
-                this.x = x; this.y = y; this.size = size;
-                this.mass = 0; this.cx = 0; this.cy = 0;
-                this.body = null;
-                this.nw = null; this.ne = null; this.sw = null; this.se = null;
-            }
-
-            insert(b) {
-                if (this.mass === 0) {
-                    this.body = b;
-                    this.mass = b.m;
-                    this.cx = b.x;
-                    this.cy = b.y;
-                    return;
-                }
-
-                if (this.body) {
-                    this.subdivide();
-                    this.insertIntoChild(this.body);
-                    this.body = null;
-                }
-
-                this.insertIntoChild(b);
-                const totalMass = this.mass + b.m;
-                this.cx = (this.cx * this.mass + b.x * b.m) / totalMass;
-                this.cy = (this.cy * this.mass + b.y * b.m) / totalMass;
-                this.mass = totalMass;
-            }
-
-            subdivide() {
-                const hs = this.size / 2;
-                this.nw = new QuadNode(this.x, this.y, hs);
-                this.ne = new QuadNode(this.x + hs, this.y, hs);
-                this.sw = new QuadNode(this.x, this.y + hs, hs);
-                this.se = new QuadNode(this.x + hs, this.y + hs, hs);
-            }
-
-            insertIntoChild(b) {
-                const midX = this.x + this.size / 2;
-                const midY = this.y + this.size / 2;
-                if (b.x < midX) {
-                    if (b.y < midY) this.nw.insert(b);
-                    else this.sw.insert(b);
-                } else {
-                    if (b.y < midY) this.ne.insert(b);
-                    else this.se.insert(b);
-                }
-            }
-
-            calcForce(b, fx, fy) {
-                if (this.mass === 0 || this.body === b) return { fx, fy };
-
-                const dx = this.cx - b.x;
-                const dy = this.cy - b.y;
-                const distSq = dx * dx + dy * dy + SOFTENING * SOFTENING;
-                const dist = Math.sqrt(distSq);
-
-                // Barnes-Hut criterion: use aggregate if node is far enough
-                if (this.body || this.size / dist < THETA) {
-                    const f = G * this.mass * b.m / distSq;
-                    fx += f * dx / dist;
-                    fy += f * dy / dist;
-                } else {
-                    if (this.nw) ({ fx, fy } = this.nw.calcForce(b, fx, fy));
-                    if (this.ne) ({ fx, fy } = this.ne.calcForce(b, fx, fy));
-                    if (this.sw) ({ fx, fy } = this.sw.calcForce(b, fx, fy));
-                    if (this.se) ({ fx, fy } = this.se.calcForce(b, fx, fy));
-                }
-                return { fx, fy };
-            }
-        }
 
         function spawnOrbit(e) {
             e.preventDefault();
@@ -168,143 +115,110 @@
 
             const wasAnimating = isAnimating;
             if (!wasAnimating) {
-                bodies = [];
-                explosions = [];
+                bodyCount = 0;
+                particleCount = 0;
             }
-            const sunMass = 5000;
 
-            // Spawn penguins from edges with orbital injection velocities
-            for (let i = 0; i < PENGUIN_COUNT; i++) {
-                let x, y;
+            const now = performance.now();
+            const startIdx = bodyCount;
+
+            // Spawn penguins from edges
+            for (let i = 0; i < PENGUIN_COUNT && bodyCount < MAX_BODIES; i++) {
+                const idx = bodyCount++;
                 const edge = Math.floor(Math.random() * 4);
                 const margin = 20;
 
-                // Spawn from random edge
-                if (edge === 0) { // top
-                    x = Math.random() * canvas.width;
-                    y = -margin;
-                } else if (edge === 1) { // right
-                    x = canvas.width + margin;
-                    y = Math.random() * canvas.height;
-                } else if (edge === 2) { // bottom
-                    x = Math.random() * canvas.width;
-                    y = canvas.height + margin;
-                } else { // left
-                    x = -margin;
-                    y = Math.random() * canvas.height;
-                }
+                if (edge === 0) { px[idx] = Math.random() * canvas.width; py[idx] = -margin; }
+                else if (edge === 1) { px[idx] = canvas.width + margin; py[idx] = Math.random() * canvas.height; }
+                else if (edge === 2) { px[idx] = Math.random() * canvas.width; py[idx] = canvas.height + margin; }
+                else { px[idx] = -margin; py[idx] = Math.random() * canvas.height; }
 
-                // Calculate vector toward sun
-                const dx = sunX - x;
-                const dy = sunY - y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const dirX = dx / dist;
-                const dirY = dy / dist;
+                const ddx = sunX - px[idx];
+                const ddy = sunY - py[idx];
+                const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+                const dirX = ddx / dist, dirY = ddy / dist;
+                const perpX = -dirY, perpY = dirX;
 
-                // Perpendicular direction (for orbital component)
-                const perpX = -dirY;
-                const perpY = dirX;
-
-                // Speed needed for elliptical orbit at this distance
-                const orbitalSpeed = Math.sqrt(G * sunMass / dist) * (1.5 + Math.random() * 0.5);
-
-                // Mix of inward velocity + tangential velocity for elliptical capture
+                const orbitalSpeed = Math.sqrt(G * SUN_MASS / dist) * (1.5 + Math.random() * 0.5);
                 const inwardRatio = 0.6 + Math.random() * 0.3;
                 const tangentRatio = Math.sqrt(1 - inwardRatio * inwardRatio);
                 const tangentSign = Math.random() > 0.5 ? 1 : -1;
 
-                const vx = dirX * orbitalSpeed * inwardRatio + perpX * orbitalSpeed * tangentRatio * tangentSign;
-                const vy = dirY * orbitalSpeed * inwardRatio + perpY * orbitalSpeed * tangentRatio * tangentSign;
-
-                bodies.push({
-                    x, y, vx, vy,
-                    m: 1 + Math.random() * 2,
-                    size: PENGUIN_SIZE * (0.7 + Math.random() * 0.6),
-                    spawnAt: performance.now() + i * 8 // Stagger spawns by 8ms each
-                });
+                vx[idx] = dirX * orbitalSpeed * inwardRatio + perpX * orbitalSpeed * tangentRatio * tangentSign;
+                vy[idx] = dirY * orbitalSpeed * inwardRatio + perpY * orbitalSpeed * tangentRatio * tangentSign;
+                mass[idx] = 1 + Math.random() * 2;
+                size[idx] = PENGUIN_SIZE * (0.7 + Math.random() * 0.6);
+                spawnAt[idx] = now + (idx - startIdx) * 8;
+                dead[idx] = 0;
             }
 
-            if (wasAnimating) return; // Already running, just added more bodies
+            if (wasAnimating) return;
 
             isAnimating = true;
-            let lastTime = performance.now();
+            let lastTime = now;
 
             function simulate() {
                 const now = performance.now();
                 const dt = Math.min((now - lastTime) / 1000, 0.033);
                 lastTime = now;
 
-                // Filter to only active bodies (spawn time passed, not dead)
-                const activeBodies = bodies.filter(b => now >= b.spawnAt && !b.dead);
+                // Physics: gravity from sun only (O(n) - much faster!)
+                for (let i = 0; i < bodyCount; i++) {
+                    if (dead[i] || now < spawnAt[i]) continue;
 
-                // Build quadtree
-                const treeSize = Math.max(canvas.width, canvas.height) * 2;
-                const tree = new QuadNode(-treeSize / 2, -treeSize / 2, treeSize * 2);
+                    const ddx = sunX - px[i];
+                    const ddy = sunY - py[i];
+                    const distSq = ddx * ddx + ddy * ddy + SOFTENING_SQ;
+                    const dist = Math.sqrt(distSq);
+                    const f = G * SUN_MASS / distSq;
 
-                // Add sun (main penguin) as massive body
-                tree.insert({ x: sunX, y: sunY, m: sunMass });
+                    vx[i] += (f * ddx / dist) * dt;
+                    vy[i] += (f * ddy / dist) * dt;
+                    vx[i] *= DAMPING;
+                    vy[i] *= DAMPING;
 
-                // Add active bodies
-                for (const b of activeBodies) tree.insert(b);
+                    px[i] += vx[i] * dt;
+                    py[i] += vy[i] * dt;
 
-                // Calculate forces and update velocities
-                for (const b of activeBodies) {
-                    let { fx, fy } = tree.calcForce(b, 0, 0);
-                    b.vx += (fx / b.m) * dt;
-                    b.vy += (fy / b.m) * dt;
-                    b.vx *= DAMPING;
-                    b.vy *= DAMPING;
-                }
-
-                // Update positions + check for explosions
-                const EXPLODE_RADIUS = 50;
-                for (const b of activeBodies) {
-                    b.x += b.vx * dt;
-                    b.y += b.vy * dt;
-
-                    // Check if hit center
-                    const dx = b.x - sunX;
-                    const dy = b.y - sunY;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < EXPLODE_RADIUS && !b.dead) {
-                        b.dead = true;
-                        // Spawn explosion particles
-                        for (let p = 0; p < 8; p++) {
-                            const angle = (p / 8) * Math.PI * 2;
-                            explosions.push({
-                                x: b.x, y: b.y,
-                                vx: Math.cos(angle) * 200,
-                                vy: Math.sin(angle) * 200,
-                                life: 0.4,
-                                size: b.size * 0.4
-                            });
+                    // Explosion check
+                    const dsq = ddx * ddx + ddy * ddy;
+                    if (dsq < EXPLODE_RADIUS_SQ) {
+                        dead[i] = 1;
+                        // Spawn 6 particles
+                        for (let p = 0; p < 6 && particleCount < MAX_PARTICLES; p++) {
+                            const pidx = particleCount++;
+                            const angle = (p / 6) * Math.PI * 2;
+                            epx[pidx] = px[i];
+                            epy[pidx] = py[i];
+                            evx[pidx] = Math.cos(angle) * 200;
+                            evy[pidx] = Math.sin(angle) * 200;
+                            elife[pidx] = 0.4;
+                            esize[pidx] = size[i] * 0.4;
                         }
                     }
                 }
 
-                // Update explosion particles
-                for (const e of explosions) {
-                    e.x += e.vx * dt;
-                    e.y += e.vy * dt;
-                    e.life -= dt;
+                // Update particles
+                for (let i = 0; i < particleCount; i++) {
+                    if (elife[i] <= 0) continue;
+                    epx[i] += evx[i] * dt;
+                    epy[i] += evy[i] * dt;
+                    elife[i] -= dt;
                 }
-                explosions = explosions.filter(e => e.life > 0);
 
                 // Render
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Draw living penguins
-                for (const b of activeBodies) {
-                    if (b.dead) continue;
-                    const hs = b.size / 2;
-                    ctx.drawImage(miniPenguin, b.x - hs, b.y - hs, b.size, b.size);
+                for (let i = 0; i < bodyCount; i++) {
+                    if (dead[i] || now < spawnAt[i]) continue;
+                    const hs = size[i] / 2;
+                    ctx.drawImage(miniPenguin, px[i] - hs, py[i] - hs, size[i], size[i]);
                 }
 
-                // Draw explosion particles
-                for (const e of explosions) {
-                    const alpha = e.life / 0.4;
-                    ctx.globalAlpha = alpha;
-                    ctx.drawImage(miniPenguin, e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+                for (let i = 0; i < particleCount; i++) {
+                    if (elife[i] <= 0) continue;
+                    ctx.globalAlpha = elife[i] / 0.4;
+                    ctx.drawImage(miniPenguin, epx[i] - esize[i]/2, epy[i] - esize[i]/2, esize[i], esize[i]);
                 }
                 ctx.globalAlpha = 1;
 
