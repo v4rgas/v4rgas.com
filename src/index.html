@@ -62,9 +62,8 @@
         const canvas = document.getElementById('penguinCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Penguin without background for rain animation
-        const rainPenguin = new Image();
-        rainPenguin.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -0.5 32 32" shape-rendering="crispEdges"><path stroke="%23070606" d="M14 6h5M13 7h7M12 8h9M15 9h2M19 9h2M14 10h4M19 10h2M14 11h1M17 11h1M19 11h2M12 12h1M19 12h2M11 13h3M18 13h3M10 14h2M19 14h3M9 15h3M20 15h3M9 16h2M20 16h3M8 17h3M21 17h3M8 18h2M21 18h3M7 19h3M21 19h3M7 20h4M20 20h4M6 21h1M10 21h2M19 21h2M23 21h2M6 22h1M11 22h1M19 22h1M24 22h1M6 23h1M12 23h1M18 23h1M24 23h1M6 24h1M12 24h7M24 24h1M7 25h1M12 25h7M23 25h1M8 26h5M18 26h5"/><path stroke="%23000000" d="M12 9h1M12 10h1M12 11h1M25 23h1"/><path stroke="%23f8f6f0" d="M13 9h2M17 9h2M13 10h1M18 10h1M13 11h1M18 11h1M12 14h2M18 14h1M12 15h8M11 16h9M11 17h10M10 18h11M10 19h11M11 20h9M12 21h7M12 22h7M13 23h5"/><path stroke="%23fcbd16" d="M15 11h2M13 12h6M7 21h3M21 21h2M7 22h4M20 22h4M7 23h5M19 23h5M8 24h4M19 24h4M10 25h1M20 25h2"/><path stroke="%23d48b07" d="M14 13h4M7 24h1M23 24h1M8 25h2M11 25h1M19 25h1M22 25h1"/><path stroke="%23d1d0cb" d="M14 14h4"/></svg>';
+        const miniPenguin = new Image();
+        miniPenguin.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -0.5 32 32" shape-rendering="crispEdges"><path stroke="%23070606" d="M14 6h5M13 7h7M12 8h9M15 9h2M19 9h2M14 10h4M19 10h2M14 11h1M17 11h1M19 11h2M12 12h1M19 12h2M11 13h3M18 13h3M10 14h2M19 14h3M9 15h3M20 15h3M9 16h2M20 16h3M8 17h3M21 17h3M8 18h2M21 18h3M7 19h3M21 19h3M7 20h4M20 20h4M6 21h1M10 21h2M19 21h2M23 21h2M6 22h1M11 22h1M19 22h1M24 22h1M6 23h1M12 23h1M18 23h1M24 23h1M6 24h1M12 24h7M24 24h1M7 25h1M12 25h7M23 25h1M8 26h5M18 26h5"/><path stroke="%23000000" d="M12 9h1M12 10h1M12 11h1M25 23h1"/><path stroke="%23f8f6f0" d="M13 9h2M17 9h2M13 10h1M18 10h1M13 11h1M18 11h1M12 14h2M18 14h1M12 15h8M11 16h9M11 17h10M10 18h11M10 19h11M11 20h9M12 21h7M12 22h7M13 23h5"/><path stroke="%23fcbd16" d="M15 11h2M13 12h6M7 21h3M21 21h2M7 22h4M20 22h4M7 23h5M19 23h5M8 24h4M19 24h4M10 25h1M20 25h2"/><path stroke="%23d48b07" d="M14 13h4M7 24h1M23 24h1M8 25h2M11 25h1M19 25h1M22 25h1"/><path stroke="%23d1d0cb" d="M14 14h4"/></svg>';
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -73,101 +72,262 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
+        // === Barnes-Hut N-Body Simulation ===
+        const THETA = 0.7; // Barnes-Hut threshold (higher = faster but less accurate)
+        const G = 800; // Gravitational constant
+        const SOFTENING = 20; // Prevent extreme forces at close range
+        const DAMPING = 0.9995; // Slight velocity damping
+        const PENGUIN_COUNT = 150;
+        const PENGUIN_SIZE = 28;
+
+        let bodies = [];
+        let explosions = [];
         let isAnimating = false;
-        let trajectories = [];
+        let sunX, sunY;
 
-        // Precalculate trajectory for one penguin (simple fall + bounce)
-        function precalculateTrajectory(startX, startDelay) {
-            const frames = [];
-            const fps = 60;
-            const dt = 1 / fps;
-            const gravity = 200;
-            const groundY = canvas.height - 20;
-
-            let x = startX;
-            let y = -40;
-            let vx = (Math.random() - 0.5) * 50;
-            let vy = 100 + Math.random() * 50;
-            let rotation = 0;
-            let rotationSpeed = 90 + Math.random() * 180;
-            let bounces = 0;
-            const maxBounces = 2 + Math.floor(Math.random() * 2);
-            const restitution = 0.4;
-
-            // Add delay frames
-            for (let i = 0; i < startDelay * fps; i++) {
-                frames.push(null);
+        // Quadtree node for Barnes-Hut
+        class QuadNode {
+            constructor(x, y, size) {
+                this.x = x; this.y = y; this.size = size;
+                this.mass = 0; this.cx = 0; this.cy = 0;
+                this.body = null;
+                this.nw = null; this.ne = null; this.sw = null; this.se = null;
             }
 
-            // Simulate until off screen
-            while (y < canvas.height + 100) {
-                vy += gravity * dt;
-                y += vy * dt;
-                x += vx * dt;
-                rotation += rotationSpeed * dt;
-
-                if (y >= groundY && bounces < maxBounces) {
-                    y = groundY;
-                    vy = -vy * restitution;
-                    vx += (Math.random() - 0.5) * 100;
-                    bounces++;
+            insert(b) {
+                if (this.mass === 0) {
+                    this.body = b;
+                    this.mass = b.m;
+                    this.cx = b.x;
+                    this.cy = b.y;
+                    return;
                 }
 
-                frames.push({ x, y, rotation });
+                if (this.body) {
+                    this.subdivide();
+                    this.insertIntoChild(this.body);
+                    this.body = null;
+                }
+
+                this.insertIntoChild(b);
+                const totalMass = this.mass + b.m;
+                this.cx = (this.cx * this.mass + b.x * b.m) / totalMass;
+                this.cy = (this.cy * this.mass + b.y * b.m) / totalMass;
+                this.mass = totalMass;
             }
 
-            return frames;
+            subdivide() {
+                const hs = this.size / 2;
+                this.nw = new QuadNode(this.x, this.y, hs);
+                this.ne = new QuadNode(this.x + hs, this.y, hs);
+                this.sw = new QuadNode(this.x, this.y + hs, hs);
+                this.se = new QuadNode(this.x + hs, this.y + hs, hs);
+            }
+
+            insertIntoChild(b) {
+                const midX = this.x + this.size / 2;
+                const midY = this.y + this.size / 2;
+                if (b.x < midX) {
+                    if (b.y < midY) this.nw.insert(b);
+                    else this.sw.insert(b);
+                } else {
+                    if (b.y < midY) this.ne.insert(b);
+                    else this.se.insert(b);
+                }
+            }
+
+            calcForce(b, fx, fy) {
+                if (this.mass === 0 || this.body === b) return { fx, fy };
+
+                const dx = this.cx - b.x;
+                const dy = this.cy - b.y;
+                const distSq = dx * dx + dy * dy + SOFTENING * SOFTENING;
+                const dist = Math.sqrt(distSq);
+
+                // Barnes-Hut criterion: use aggregate if node is far enough
+                if (this.body || this.size / dist < THETA) {
+                    const f = G * this.mass * b.m / distSq;
+                    fx += f * dx / dist;
+                    fy += f * dy / dist;
+                } else {
+                    if (this.nw) ({ fx, fy } = this.nw.calcForce(b, fx, fy));
+                    if (this.ne) ({ fx, fy } = this.ne.calcForce(b, fx, fy));
+                    if (this.sw) ({ fx, fy } = this.sw.calcForce(b, fx, fy));
+                    if (this.se) ({ fx, fy } = this.se.calcForce(b, fx, fy));
+                }
+                return { fx, fy };
+            }
         }
 
-        function spawnPenguinRain(e) {
+        function spawnOrbit(e) {
             e.preventDefault();
-            if (isAnimating) return;
 
-            isAnimating = true;
-            trajectories = [];
+            const rect = penguin.getBoundingClientRect();
+            sunX = rect.left + rect.width / 2;
+            sunY = rect.top + rect.height / 2;
 
-            const count = 80;
-            for (let i = 0; i < count; i++) {
-                const startX = Math.random() * canvas.width;
-                const delay = (i / count) * 2; // stagger over 2 seconds
-                trajectories.push(precalculateTrajectory(startX, delay));
+            const wasAnimating = isAnimating;
+            if (!wasAnimating) {
+                bodies = [];
+                explosions = [];
+            }
+            const sunMass = 5000;
+
+            // Spawn penguins from edges with orbital injection velocities
+            for (let i = 0; i < PENGUIN_COUNT; i++) {
+                let x, y;
+                const edge = Math.floor(Math.random() * 4);
+                const margin = 20;
+
+                // Spawn from random edge
+                if (edge === 0) { // top
+                    x = Math.random() * canvas.width;
+                    y = -margin;
+                } else if (edge === 1) { // right
+                    x = canvas.width + margin;
+                    y = Math.random() * canvas.height;
+                } else if (edge === 2) { // bottom
+                    x = Math.random() * canvas.width;
+                    y = canvas.height + margin;
+                } else { // left
+                    x = -margin;
+                    y = Math.random() * canvas.height;
+                }
+
+                // Calculate vector toward sun
+                const dx = sunX - x;
+                const dy = sunY - y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dirX = dx / dist;
+                const dirY = dy / dist;
+
+                // Perpendicular direction (for orbital component)
+                const perpX = -dirY;
+                const perpY = dirX;
+
+                // Speed needed for elliptical orbit at this distance
+                const orbitalSpeed = Math.sqrt(G * sunMass / dist) * (1.5 + Math.random() * 0.5);
+
+                // Mix of inward velocity + tangential velocity for elliptical capture
+                const inwardRatio = 0.6 + Math.random() * 0.3;
+                const tangentRatio = Math.sqrt(1 - inwardRatio * inwardRatio);
+                const tangentSign = Math.random() > 0.5 ? 1 : -1;
+
+                const vx = dirX * orbitalSpeed * inwardRatio + perpX * orbitalSpeed * tangentRatio * tangentSign;
+                const vy = dirY * orbitalSpeed * inwardRatio + perpY * orbitalSpeed * tangentRatio * tangentSign;
+
+                bodies.push({
+                    x, y, vx, vy,
+                    m: 1 + Math.random() * 2,
+                    size: PENGUIN_SIZE * (0.7 + Math.random() * 0.6),
+                    spawnAt: performance.now() + i * 8 // Stagger spawns by 8ms each
+                });
             }
 
-            let frame = 0;
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'screen';
+            if (wasAnimating) return; // Already running, just added more bodies
 
-                let activeCount = 0;
-                for (const traj of trajectories) {
-                    const pos = traj[frame];
-                    if (pos) {
-                        ctx.save();
-                        ctx.translate(pos.x, pos.y);
-                        ctx.rotate(pos.rotation * Math.PI / 180);
-                        ctx.drawImage(rainPenguin, -20, -20, 40, 40);
-                        ctx.restore();
-                        activeCount++;
-                    } else if (frame < traj.length) {
-                        activeCount++;
+            isAnimating = true;
+            let lastTime = performance.now();
+
+            function simulate() {
+                const now = performance.now();
+                const dt = Math.min((now - lastTime) / 1000, 0.033);
+                lastTime = now;
+
+                // Filter to only active bodies (spawn time passed, not dead)
+                const activeBodies = bodies.filter(b => now >= b.spawnAt && !b.dead);
+
+                // Build quadtree
+                const treeSize = Math.max(canvas.width, canvas.height) * 2;
+                const tree = new QuadNode(-treeSize / 2, -treeSize / 2, treeSize * 2);
+
+                // Add sun (main penguin) as massive body
+                tree.insert({ x: sunX, y: sunY, m: sunMass });
+
+                // Add active bodies
+                for (const b of activeBodies) tree.insert(b);
+
+                // Calculate forces and update velocities
+                for (const b of activeBodies) {
+                    let { fx, fy } = tree.calcForce(b, 0, 0);
+                    b.vx += (fx / b.m) * dt;
+                    b.vy += (fy / b.m) * dt;
+                    b.vx *= DAMPING;
+                    b.vy *= DAMPING;
+                }
+
+                // Update positions + check for explosions
+                const EXPLODE_RADIUS = 50;
+                for (const b of activeBodies) {
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
+
+                    // Check if hit center
+                    const dx = b.x - sunX;
+                    const dy = b.y - sunY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < EXPLODE_RADIUS && !b.dead) {
+                        b.dead = true;
+                        // Spawn explosion particles
+                        for (let p = 0; p < 8; p++) {
+                            const angle = (p / 8) * Math.PI * 2;
+                            explosions.push({
+                                x: b.x, y: b.y,
+                                vx: Math.cos(angle) * 200,
+                                vy: Math.sin(angle) * 200,
+                                life: 0.4,
+                                size: b.size * 0.4
+                            });
+                        }
                     }
                 }
 
-                frame++;
-                if (activeCount > 0) {
-                    requestAnimationFrame(animate);
-                } else {
-                    isAnimating = false;
+                // Update explosion particles
+                for (const e of explosions) {
+                    e.x += e.vx * dt;
+                    e.y += e.vy * dt;
+                    e.life -= dt;
                 }
+                explosions = explosions.filter(e => e.life > 0);
+
+                // Render
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw living penguins
+                for (const b of activeBodies) {
+                    if (b.dead) continue;
+                    const hs = b.size / 2;
+                    ctx.drawImage(miniPenguin, b.x - hs, b.y - hs, b.size, b.size);
+                }
+
+                // Draw explosion particles
+                for (const e of explosions) {
+                    const alpha = e.life / 0.4;
+                    ctx.globalAlpha = alpha;
+                    ctx.drawImage(miniPenguin, e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+                }
+                ctx.globalAlpha = 1;
+
+                requestAnimationFrame(simulate);
             }
 
-            requestAnimationFrame(animate);
+            simulate();
         }
+
+        // Update sun position when main penguin moves
+        function updateSunPosition() {
+            if (!isAnimating) return;
+            const rect = penguin.getBoundingClientRect();
+            sunX = rect.left + rect.width / 2;
+            sunY = rect.top + rect.height / 2;
+        }
+        window.addEventListener('resize', updateSunPosition);
+        window.addEventListener('scroll', updateSunPosition);
 
         penguin.addEventListener('mouseenter', () => penguin.classList.add('jumping'));
         penguin.addEventListener('animationend', () => penguin.classList.remove('jumping'));
-        penguin.addEventListener('click', spawnPenguinRain);
-        penguin.addEventListener('touchstart', spawnPenguinRain, { passive: false });
+        penguin.addEventListener('click', spawnOrbit);
+        penguin.addEventListener('touchstart', spawnOrbit, { passive: false });
 
         // Email obfuscation (prevents Cloudflare injection)
         document.getElementById('email').textContent = ['hello', 'v4rgas.com'].join('@');
