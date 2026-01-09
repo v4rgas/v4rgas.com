@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "dev": "concurrently \"node build.js --watch\" \"browser-sync start --server --files '*.html, *.css'\""
   },
   "repository": {
     "type": "git",
@@ -18,7 +19,9 @@
   "homepage": "https://github.com/v4rgas/v4rgas.com#readme",
   "description": "",
   "devDependencies": {
+    "browser-sync": "^3.0.4",
     "clean-css": "^5.3.3",
+    "concurrently": "^9.2.1",
     "html-minifier-terser": "^7.2.0"
   }
 }

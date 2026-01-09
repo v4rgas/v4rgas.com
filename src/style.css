@@ -1,9 +1,22 @@
+:root {
+    --color-bg: black;
+    --color-text: white;
+    --color-text-muted: lightgray;
+    --color-hover: #ccc;
+    --font-family: Arial, sans-serif;
+    --max-width: 600px;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 2rem;
+    --icon-size: 48px;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
-    color: white;
+    font-family: var(--font-family);
+    color: var(--color-text);
 }
 
 a {
@@ -11,7 +24,7 @@ a {
 }
 
 body {
-    background-color: black;
+    background-color: var(--color-bg);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -26,13 +39,13 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    max-width: 600px;
+    max-width: var(--max-width);
 }
 
 .social-icons {
     display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: var(--space-md);
+    margin-top: var(--space-md);
     justify-content: space-evenly;
 }
 
@@ -41,30 +54,30 @@ body {
 }
 
 .social-icons svg {
-    width: 48px;
-    height: 48px;
-    fill: white;
+    width: var(--icon-size);
+    height: var(--icon-size);
+    fill: var(--color-text);
 }
 
 .social-icons a:hover svg {
-    fill: #ccc;
+    fill: var(--color-hover);
 }
 
 article {
     width: 100%;
-    max-width: 600px;
-    margin: 1rem 0;
+    max-width: var(--max-width);
+    margin: var(--space-md) 0;
 }
 
 footer {
     position: fixed;
     bottom: 0;
     text-align: center;
-    padding: 1rem;
+    padding: var(--space-md);
 }
 
 footer h2 {
-    font-size: 1rem;
+    font-size: var(--space-md);
     font-weight: normal;
 }
 
@@ -104,15 +117,15 @@ footer h2 {
 }
 
 #cv main {
-    margin: 1rem;
+    margin: var(--space-md);
 }
 
 .date {
     font-size: small;
     font-weight: lighter;
-    color: lightgray;
+    color: var(--color-text-muted);
 }
 
 .gutter-bottom {
-    margin-bottom: 2rem;
+    margin-bottom: var(--space-lg);
 }
