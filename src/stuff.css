@@ -22,12 +22,18 @@ h2 {
 .tl li {
     display: flex;
     justify-content: space-between;
+    gap: var(--space-md);
     padding: var(--space-md) 0;
     border-bottom: 1px solid var(--color-text-muted);
 }
 
 .tl a {
     text-decoration: underline;
+    flex: 1;
+}
+
+.tl .date {
+    white-space: nowrap;
 }
 
 .tl a:hover {
