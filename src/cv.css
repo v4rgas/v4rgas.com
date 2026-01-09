@@ -1,0 +1,16 @@
+main {
+    padding: var(--space-md) 0;
+}
+
+article {
+    width: 100%;
+    margin: var(--space-md) 0;
+}
+
+.my-name {
+    font-size: 2.5rem;
+}
+
+.gutter-bottom {
+    margin-bottom: var(--space-lg);
+}

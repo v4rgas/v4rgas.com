@@ -1,6 +1,6 @@
 import { minify } from 'html-minifier-terser';
 import CleanCSS from 'clean-css';
-import { readFileSync, writeFileSync, cpSync, rmSync, existsSync, watch } from 'fs';
+import { readFileSync, writeFileSync, cpSync, rmSync, existsSync, watch, mkdirSync, readdirSync } from 'fs';
 
 const cleanCSS = new CleanCSS();
 const isWatch = process.argv.includes('--watch');
@@ -17,18 +17,35 @@ function processPartials(html) {
     });
 }
 
+function minifyCSS(path) {
+    return cleanCSS.minify(readFileSync(path, 'utf8')).styles;
+}
+
 async function build() {
-    // Minify CSS
-    const css = readFileSync('src/style.css', 'utf8');
-    const minifiedCSS = cleanCSS.minify(css).styles;
+    // Minify CSS files
+    const coreCSS = minifyCSS('src/core.css');
+    const landingCSS = minifyCSS('src/landing.css');
+    const cvCSS = minifyCSS('src/cv.css');
+    const stuffCSS = minifyCSS('src/stuff.css');
+
+    // Write CSS files
+    writeFileSync('core.css', coreCSS);
+    writeFileSync('landing.css', landingCSS);
+    writeFileSync('cv.css', cvCSS);
+    writeFileSync('stuff.css', stuffCSS);
 
     // Helper to build an HTML file
-    async function buildHTML(srcPath, destPath, inlineCSS = false) {
+    async function buildHTML(srcPath, destPath, inlineStyles = null) {
         let html = readFileSync(srcPath, 'utf8');
         html = processPartials(html);
-        if (inlineCSS) {
-            html = html.replace('<link rel="stylesheet" href="style.css">', `<style>${minifiedCSS}</style>`);
+
+        // Inline CSS if provided
+        if (inlineStyles) {
+            for (const [href, css] of Object.entries(inlineStyles)) {
+                html = html.replace(`<link rel="stylesheet" href="${href}">`, `<style>${css}</style>`);
+            }
         }
+
         const minified = await minify(html, {
             collapseWhitespace: true,
             removeComments: true,
@@ -40,11 +57,21 @@ async function build() {
     }
 
     // Build HTML files
-    const minifiedHTML = await buildHTML('src/index.html', 'index.html', true);
-    await buildHTML('src/cv.html', 'cv.html', false);
+    const minifiedHTML = await buildHTML('src/index.html', 'index.html', {
+        'core.css': coreCSS,
+        'landing.css': landingCSS
+    });
+    await buildHTML('src/cv.html', 'cv.html');
+    await buildHTML('src/stuff.html', 'stuff.html');
 
-    // Write CSS
-    writeFileSync('style.css', minifiedCSS);
+    // Build stuff/*.html
+    if (existsSync('src/stuff')) {
+        mkdirSync('stuff', { recursive: true });
+        for (const file of readdirSync('src/stuff').filter(f => f.endsWith('.html'))) {
+            await buildHTML(`src/stuff/${file}`, `stuff/${file}`);
+        }
+    }
+
     cpSync('src/robots.txt', 'robots.txt');
     cpSync('src/sitemap.xml', 'sitemap.xml');
 
@@ -54,7 +81,7 @@ async function build() {
 
     // Report sizes
     const size = Buffer.byteLength(minifiedHTML, 'utf8');
-    console.log(`[${new Date().toLocaleTimeString()}] index.html: ${size} bytes, style.css: ${Buffer.byteLength(minifiedCSS, 'utf8')} bytes ${size < 14336 ? '✓' : '✗'}`);
+    console.log(`[${new Date().toLocaleTimeString()}] index.html: ${size} bytes ${size < 14336 ? '✓' : '✗'}`);
 }
 
 await build();

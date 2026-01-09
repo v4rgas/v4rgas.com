@@ -1,0 +1,62 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.social-icons {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+    justify-content: space-evenly;
+}
+
+.social-icons a {
+    display: inline-block;
+}
+
+.social-icons svg {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    fill: var(--color-text);
+}
+
+.social-icons a:hover svg {
+    fill: var(--color-hover);
+}
+
+#penguin {
+    width: 150px;
+    cursor: pointer;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+#penguinCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background-color: transparent;
+}
+
+@keyframes jump {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+#penguin.jumping {
+    animation: jump 0.5s ease-in-out;
+}
