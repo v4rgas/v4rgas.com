@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {{> head-common}}
+    <link rel="stylesheet" href="rocket.css">
+    <title>Rocket - v4rgas</title>
+    <meta name="description" content="Rocket Simulator">
+</head>
+
+<body>
+    <div class="hud">
+        <p>UP: thrust | LEFT/RIGHT: rotate | R: reset</p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl2', { alpha: false });
+
+        // Physics constants
+        const G = 200, SOFTENING_SQ = 2000, DAMPING = 0.9999;
+        const THRUST = 400, ROTATE_SPEED = 3;
+        const TIME_SCALE = 0.4; // Slow motion
+
+        // Bodies: Sun (fixed), Earth, and 3 penguins orbiting
+        const bodies = [
+            { x: 0, y: 0, vx: 0, vy: 0, mass: 20000, radius: 18, color: [1.0, 0.8, 0.0], fixed: true }, // Sun
+            { x: 180, y: 0, vx: 0, vy: 0, mass: 8000, radius: 10, color: [0.29, 0.56, 0.85] }, // Earth
+            { x: 205, y: 0, vx: 0, vy: 0, mass: 50, radius: 5, color: [1.0, 1.0, 1.0], penguin: true },  // Penguin 1
+            { x: 180, y: -30, vx: 0, vy: 0, mass: 50, radius: 5, color: [1.0, 1.0, 1.0], penguin: true }, // Penguin 2
+            { x: 155, y: 0, vx: 0, vy: 0, mass: 50, radius: 5, color: [1.0, 1.0, 1.0], penguin: true }   // Penguin 3
+        ];
+
+        // Give Earth orbital velocity around Sun
+        const earthDist = 180;
+        bodies[1].vy = Math.sqrt(G * bodies[0].mass / earthDist);
+        // Give penguins orbital velocity around Earth
+        bodies[2].vy = bodies[1].vy + Math.sqrt(G * bodies[1].mass / 25) * 0.7;
+        bodies[3].vx = Math.sqrt(G * bodies[1].mass / 30) * 0.7; bodies[3].vy = bodies[1].vy;
+        bodies[4].vy = bodies[1].vy - Math.sqrt(G * bodies[1].mass / 25) * 0.7;
+
+        // Trajectory prediction
+        const TRAJECTORY_STEPS = 60;
+        const TRAJECTORY_DT = 0.03;
+        const trajectoryPoints = new Float32Array(TRAJECTORY_STEPS * 2);
+
+        // Ship state
+        let ship = { x: 250, y: 0, vx: 0, vy: 50, angle: -Math.PI / 2, size: 12 };
+        let keys = { up: false, left: false, right: false };
+
+        // WebGL shaders
+        const vsCircle = `#version 300 es
+            in vec2 aPos;
+            uniform vec2 uRes;
+            uniform vec2 uCenter;
+            uniform float uRadius;
+            out vec2 vLocal;
+            void main() {
+                vLocal = aPos;
+                vec2 world = uCenter + aPos * uRadius;
+                vec2 clip = (world / uRes) * 2.0;
+                gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+            }`;
+
+        const fsCircle = `#version 300 es
+            precision mediump float;
+            in vec2 vLocal;
+            uniform vec3 uColor;
+            uniform float uIsSun;
+            out vec4 fragColor;
+            void main() {
+                float d = length(vLocal);
+                if (d > 1.0) discard;
+
+                // Gradient shading
+                float light = 1.0 - d * 0.4;
+                vec3 col = uColor * light;
+
+                // Sun glow
+                if (uIsSun > 0.5) {
+                    float glow = 1.0 - smoothstep(0.5, 1.0, d);
+                    col += vec3(0.3, 0.15, 0.0) * glow;
+                } else {
+                    // Planet shading (light from top-left)
+                    float shade = dot(normalize(vLocal + vec2(0.3, 0.3)), vec2(-0.5, -0.5)) * 0.3 + 0.7;
+                    col *= shade;
+                }
+
+                fragColor = vec4(col, 1.0);
+            }`;
+
+        const vsShip = `#version 300 es
+            in vec2 aPos;
+            uniform vec2 uRes;
+            uniform vec2 uCenter;
+            uniform float uAngle;
+            uniform float uSize;
+            out vec2 vLocal;
+            void main() {
+                vLocal = aPos;
+                float c = cos(uAngle), s = sin(uAngle);
+                vec2 rotated = vec2(aPos.x * c - aPos.y * s, aPos.x * s + aPos.y * c);
+                vec2 world = uCenter + rotated * uSize;
+                vec2 clip = (world / uRes) * 2.0;
+                gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+            }`;
+
+        const fsShip = `#version 300 es
+            precision mediump float;
+            in vec2 vLocal;
+            uniform float uThrust;
+            out vec4 fragColor;
+            void main() {
+                if (vLocal.x < -0.5) {
+                    // Flame area
+                    if (uThrust > 0.5) {
+                        fragColor = vec4(1.0, 0.4, 0.0, 1.0); // Orange flame
+                    } else {
+                        discard;
+                    }
+                } else {
+                    fragColor = vec4(1.0, 1.0, 1.0, 1.0); // White body
+                }
+            }`;
+
+        const vsLine = `#version 300 es
+            in vec2 aPos;
+            in float aAlpha;
+            uniform vec2 uRes;
+            out float vAlpha;
+            void main() {
+                vAlpha = aAlpha;
+                vec2 clip = (aPos / uRes) * 2.0;
+                gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+                gl_PointSize = 2.0;
+            }`;
+
+        const fsLine = `#version 300 es
+            precision mediump float;
+            in float vAlpha;
+            out vec4 fragColor;
+            void main() {
+                fragColor = vec4(0.6, 0.6, 0.6, vAlpha);
+            }`;
+
+        // Penguin sprite shaders
+        const vsPenguin = `#version 300 es
+            in vec2 aPos;
+            uniform vec2 uRes;
+            uniform vec2 uCenter;
+            uniform float uSize;
+            out vec2 vUV;
+            void main() {
+                vUV = aPos * 0.5 + 0.5;
+                vec2 world = uCenter + aPos * uSize;
+                vec2 clip = (world / uRes) * 2.0;
+                gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+            }`;
+
+        const fsPenguin = `#version 300 es
+            precision mediump float;
+            in vec2 vUV;
+            uniform sampler2D uTex;
+            out vec4 fragColor;
+            void main() {
+                fragColor = texture(uTex, vUV);
+            }`;
+
+        function createShader(type, src) {
+            const s = gl.createShader(type);
+            gl.shaderSource(s, src);
+            gl.compileShader(s);
+            return s;
+        }
+
+        function createProgram(vs, fs) {
+            const p = gl.createProgram();
+            gl.attachShader(p, createShader(gl.VERTEX_SHADER, vs));
+            gl.attachShader(p, createShader(gl.FRAGMENT_SHADER, fs));
+            gl.linkProgram(p);
+            return p;
+        }
+
+        const circleProgram = createProgram(vsCircle, fsCircle);
+        const shipProgram = createProgram(vsShip, fsShip);
+        const lineProgram = createProgram(vsLine, fsLine);
+        const penguinProgram = createProgram(vsPenguin, fsPenguin);
+
+        // Load penguin texture
+        const penguinTex = gl.createTexture();
+        const penguinImg = new Image();
+        penguinImg.onload = () => {
+            gl.bindTexture(gl.TEXTURE_2D, penguinTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, penguinImg);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        };
+        penguinImg.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -0.5 32 32" shape-rendering="crispEdges"><path stroke="%23070606" d="M14 6h5M13 7h7M12 8h9M15 9h2M19 9h2M14 10h4M19 10h2M14 11h1M17 11h1M19 11h2M12 12h1M19 12h2M11 13h3M18 13h3M10 14h2M19 14h3M9 15h3M20 15h3M9 16h2M20 16h3M8 17h3M21 17h3M8 18h2M21 18h3M7 19h3M21 19h3M7 20h4M20 20h4M6 21h1M10 21h2M19 21h2M23 21h2M6 22h1M11 22h1M19 22h1M24 22h1M6 23h1M12 23h1M18 23h1M24 23h1M6 24h1M12 24h7M24 24h1M7 25h1M12 25h7M23 25h1M8 26h5M18 26h5"/><path stroke="%23000000" d="M12 9h1M12 10h1M12 11h1M25 23h1"/><path stroke="%23f8f6f0" d="M13 9h2M17 9h2M13 10h1M18 10h1M13 11h1M18 11h1M12 14h2M18 14h1M12 15h8M11 16h9M11 17h10M10 18h11M10 19h11M11 20h9M12 21h7M12 22h7M13 23h5"/><path stroke="%23fcbd16" d="M15 11h2M13 12h6M7 21h3M21 21h2M7 22h4M20 22h4M7 23h5M19 23h5M8 24h4M19 24h4M10 25h1M20 25h2"/><path stroke="%23d48b07" d="M14 13h4M7 24h1M23 24h1M8 25h2M11 25h1M19 25h1M22 25h1"/><path stroke="%23d1d0cb" d="M14 14h4"/></svg>';
+
+        // Circle quad (for planets)
+        const quadVerts = new Float32Array([-1,-1, 1,-1, -1,1, 1,1]);
+        const quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, quadVerts, gl.STATIC_DRAW);
+
+        // Ship triangle (arrow shape pointing right in local coords, thrust at back)
+        const shipVerts = new Float32Array([
+            0.6, 0,      // nose (front)
+            -0.4, -0.5,  // back left
+            -0.4, 0.5,   // back right
+            // Flame triangle
+            -0.4, -0.3,
+            -1.0, 0,
+            -0.4, 0.3
+        ]);
+        const shipBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shipBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, shipVerts, gl.STATIC_DRAW);
+
+        // Trajectory buffers (position + alpha)
+        const lineBuf = gl.createBuffer();
+        const lineAlphaBuf = gl.createBuffer();
+        const trajectoryAlpha = new Float32Array(TRAJECTORY_STEPS);
+
+        // Uniforms
+        const circleUniforms = {
+            uRes: gl.getUniformLocation(circleProgram, 'uRes'),
+            uCenter: gl.getUniformLocation(circleProgram, 'uCenter'),
+            uRadius: gl.getUniformLocation(circleProgram, 'uRadius'),
+            uColor: gl.getUniformLocation(circleProgram, 'uColor'),
+            uIsSun: gl.getUniformLocation(circleProgram, 'uIsSun')
+        };
+        const shipUniforms = {
+            uRes: gl.getUniformLocation(shipProgram, 'uRes'),
+            uCenter: gl.getUniformLocation(shipProgram, 'uCenter'),
+            uAngle: gl.getUniformLocation(shipProgram, 'uAngle'),
+            uSize: gl.getUniformLocation(shipProgram, 'uSize'),
+            uThrust: gl.getUniformLocation(shipProgram, 'uThrust')
+        };
+
+        const circleAPos = gl.getAttribLocation(circleProgram, 'aPos');
+        const shipAPos = gl.getAttribLocation(shipProgram, 'aPos');
+        const lineAPos = gl.getAttribLocation(lineProgram, 'aPos');
+        const lineAAlpha = gl.getAttribLocation(lineProgram, 'aAlpha');
+        const lineURes = gl.getUniformLocation(lineProgram, 'uRes');
+
+        const penguinAPos = gl.getAttribLocation(penguinProgram, 'aPos');
+        const penguinUniforms = {
+            uRes: gl.getUniformLocation(penguinProgram, 'uRes'),
+            uCenter: gl.getUniformLocation(penguinProgram, 'uCenter'),
+            uSize: gl.getUniformLocation(penguinProgram, 'uSize')
+        };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Keyboard controls
+        window.addEventListener('keydown', e => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'KeyR') resetShip();
+        });
+        window.addEventListener('keyup', e => {
+            if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+        });
+
+        function resetShip() {
+            ship = { x: 250, y: 0, vx: 0, vy: 50, angle: -Math.PI / 2, size: 12 };
+        }
+
+        // Camera offset (center of screen = 0,0 in world)
+        function worldToScreen(x, y) {
+            return [canvas.width / 2 + x, canvas.height / 2 + y];
+        }
+
+        let lastTime = performance.now();
+
+        function simulate() {
+            const now = performance.now();
+            const dt = Math.min((now - lastTime) / 1000, 0.033) * TIME_SCALE;
+            lastTime = now;
+
+            // Update planet positions with N-body physics
+            for (let i = 1; i < bodies.length; i++) {
+                if (bodies[i].fixed) continue;
+                let ax = 0, ay = 0;
+                for (let j = 0; j < bodies.length; j++) {
+                    if (i === j) continue;
+                    const dx = bodies[j].x - bodies[i].x;
+                    const dy = bodies[j].y - bodies[i].y;
+                    const distSq = dx * dx + dy * dy + SOFTENING_SQ;
+                    const dist = Math.sqrt(distSq);
+                    const f = G * bodies[j].mass / distSq;
+                    ax += f * dx / dist;
+                    ay += f * dy / dist;
+                }
+                bodies[i].vx += ax * dt;
+                bodies[i].vy += ay * dt;
+            }
+            for (let i = 1; i < bodies.length; i++) {
+                if (bodies[i].fixed) continue;
+                bodies[i].x += bodies[i].vx * dt;
+                bodies[i].y += bodies[i].vy * dt;
+            }
+
+            // Ship rotation
+            if (keys.left) ship.angle -= ROTATE_SPEED * dt;
+            if (keys.right) ship.angle += ROTATE_SPEED * dt;
+
+            // Ship thrust
+            if (keys.up) {
+                ship.vx += Math.cos(ship.angle) * THRUST * dt;
+                ship.vy += Math.sin(ship.angle) * THRUST * dt;
+            }
+
+            // Ship gravity from all bodies
+            for (const body of bodies) {
+                const dx = body.x - ship.x;
+                const dy = body.y - ship.y;
+                const distSq = dx * dx + dy * dy + SOFTENING_SQ;
+                const dist = Math.sqrt(distSq);
+                const f = G * body.mass / distSq;
+                ship.vx += f * dx / dist * dt;
+                ship.vy += f * dy / dist * dt;
+
+                // Collision with planet
+                if (dist < body.radius + ship.size / 2) {
+                    resetShip();
+                }
+            }
+
+            // Apply damping
+            ship.vx *= DAMPING;
+            ship.vy *= DAMPING;
+
+            // Update ship position
+            ship.x += ship.vx * dt;
+            ship.y += ship.vy * dt;
+
+            // Keep ship in bounds
+            const bounds = Math.min(canvas.width, canvas.height) / 2 - 20;
+            if (ship.x < -bounds) { ship.x = -bounds; ship.vx *= -0.5; }
+            if (ship.x > bounds) { ship.x = bounds; ship.vx *= -0.5; }
+            if (ship.y < -bounds) { ship.y = -bounds; ship.vy *= -0.5; }
+            if (ship.y > bounds) { ship.y = bounds; ship.vy *= -0.5; }
+
+            // Predict trajectory with future body positions
+            let predX = ship.x, predY = ship.y, predVx = ship.vx, predVy = ship.vy;
+            // Copy body states for prediction
+            const predBodies = bodies.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, mass: b.mass, fixed: b.fixed }));
+            let dotCount = 0;
+            for (let i = 0; i < TRAJECTORY_STEPS * 3; i++) {
+                // Update predicted body positions
+                for (let bi = 1; bi < predBodies.length; bi++) {
+                    if (predBodies[bi].fixed) continue;
+                    let ax = 0, ay = 0;
+                    for (let bj = 0; bj < predBodies.length; bj++) {
+                        if (bi === bj) continue;
+                        const dx = predBodies[bj].x - predBodies[bi].x;
+                        const dy = predBodies[bj].y - predBodies[bi].y;
+                        const distSq = dx * dx + dy * dy + SOFTENING_SQ;
+                        const dist = Math.sqrt(distSq);
+                        ax += G * predBodies[bj].mass * dx / (distSq * dist);
+                        ay += G * predBodies[bj].mass * dy / (distSq * dist);
+                    }
+                    predBodies[bi].vx += ax * TRAJECTORY_DT;
+                    predBodies[bi].vy += ay * TRAJECTORY_DT;
+                }
+                for (let bi = 1; bi < predBodies.length; bi++) {
+                    if (predBodies[bi].fixed) continue;
+                    predBodies[bi].x += predBodies[bi].vx * TRAJECTORY_DT;
+                    predBodies[bi].y += predBodies[bi].vy * TRAJECTORY_DT;
+                }
+                // Update predicted ship position
+                for (const pb of predBodies) {
+                    const dx = pb.x - predX, dy = pb.y - predY;
+                    const distSq = dx * dx + dy * dy + SOFTENING_SQ;
+                    const dist = Math.sqrt(distSq);
+                    predVx += G * pb.mass * dx / (distSq * dist) * TRAJECTORY_DT;
+                    predVy += G * pb.mass * dy / (distSq * dist) * TRAJECTORY_DT;
+                }
+                predX += predVx * TRAJECTORY_DT;
+                predY += predVy * TRAJECTORY_DT;
+                if (i % 3 === 0 && dotCount < TRAJECTORY_STEPS) {
+                    const [sx, sy] = worldToScreen(predX, predY);
+                    trajectoryPoints[dotCount * 2] = sx - canvas.width / 2;
+                    trajectoryPoints[dotCount * 2 + 1] = sy - canvas.height / 2;
+                    trajectoryAlpha[dotCount] = 1.0 - (dotCount / TRAJECTORY_STEPS);
+                    dotCount++;
+                }
+            }
+
+            // Render
+            gl.clearColor(0, 0, 0, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            // Draw trajectory (dotted, fading)
+            gl.useProgram(lineProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, trajectoryPoints, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(lineAPos);
+            gl.vertexAttribPointer(lineAPos, 2, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, lineAlphaBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, trajectoryAlpha, gl.DYNAMIC_DRAW);
+            gl.enableVertexAttribArray(lineAAlpha);
+            gl.vertexAttribPointer(lineAAlpha, 1, gl.FLOAT, false, 0, 0);
+            gl.uniform2f(lineURes, canvas.width / 2, canvas.height / 2);
+            gl.drawArrays(gl.POINTS, 0, TRAJECTORY_STEPS);
+
+            // Draw planets (non-penguins)
+            gl.useProgram(circleProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+            gl.enableVertexAttribArray(circleAPos);
+            gl.vertexAttribPointer(circleAPos, 2, gl.FLOAT, false, 0, 0);
+            gl.uniform2f(circleUniforms.uRes, canvas.width / 2, canvas.height / 2);
+
+            for (const body of bodies) {
+                if (body.penguin) continue;
+                const [sx, sy] = worldToScreen(body.x, body.y);
+                gl.uniform2f(circleUniforms.uCenter, sx - canvas.width / 2, sy - canvas.height / 2);
+                gl.uniform1f(circleUniforms.uRadius, body.radius);
+                gl.uniform3fv(circleUniforms.uColor, body.color);
+                gl.uniform1f(circleUniforms.uIsSun, body.fixed ? 1.0 : 0.0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+
+            // Draw penguins
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            gl.useProgram(penguinProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+            gl.enableVertexAttribArray(penguinAPos);
+            gl.vertexAttribPointer(penguinAPos, 2, gl.FLOAT, false, 0, 0);
+            gl.uniform2f(penguinUniforms.uRes, canvas.width / 2, canvas.height / 2);
+            gl.bindTexture(gl.TEXTURE_2D, penguinTex);
+
+            for (const body of bodies) {
+                if (!body.penguin) continue;
+                const [sx, sy] = worldToScreen(body.x, body.y);
+                gl.uniform2f(penguinUniforms.uCenter, sx - canvas.width / 2, sy - canvas.height / 2);
+                gl.uniform1f(penguinUniforms.uSize, body.radius * 2);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+            gl.disable(gl.BLEND);
+
+            // Draw ship
+            gl.useProgram(shipProgram);
+            gl.bindBuffer(gl.ARRAY_BUFFER, shipBuf);
+            gl.enableVertexAttribArray(shipAPos);
+            gl.vertexAttribPointer(shipAPos, 2, gl.FLOAT, false, 0, 0);
+            gl.uniform2f(shipUniforms.uRes, canvas.width / 2, canvas.height / 2);
+            const [shipSx, shipSy] = worldToScreen(ship.x, ship.y);
+            gl.uniform2f(shipUniforms.uCenter, shipSx - canvas.width / 2, shipSy - canvas.height / 2);
+            gl.uniform1f(shipUniforms.uAngle, ship.angle);
+            gl.uniform1f(shipUniforms.uSize, ship.size);
+            gl.uniform1f(shipUniforms.uThrust, keys.up ? 1.0 : 0.0);
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            requestAnimationFrame(simulate);
+        }
+
+        simulate();
+    </script>
+</body>
+
+</html>

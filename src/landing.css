@@ -12,6 +12,13 @@ body {
     text-align: center;
 }
 
+.hint {
+    position: fixed;
+    bottom: 4rem;
+    font-size: small;
+    color: var(--color-text-muted);
+}
+
 .social-icons {
     display: flex;
     gap: var(--space-md);

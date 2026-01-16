@@ -27,12 +27,14 @@ async function build() {
     const landingCSS = minifyCSS('src/landing.css');
     const cvCSS = minifyCSS('src/cv.css');
     const stuffCSS = minifyCSS('src/stuff.css');
+    const rocketCSS = minifyCSS('src/rocket.css');
 
     // Write CSS files
     writeFileSync('core.css', coreCSS);
     writeFileSync('landing.css', landingCSS);
     writeFileSync('cv.css', cvCSS);
     writeFileSync('stuff.css', stuffCSS);
+    writeFileSync('rocket.css', rocketCSS);
 
     // Helper to build an HTML file
     async function buildHTML(srcPath, destPath, inlineStyles = null) {
@@ -63,6 +65,7 @@ async function build() {
     });
     await buildHTML('src/cv.html', 'cv.html');
     await buildHTML('src/stuff.html', 'stuff.html');
+    await buildHTML('src/rocket.html', 'rocket.html');
 
     // Build stuff/*.html
     if (existsSync('src/stuff')) {

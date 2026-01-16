@@ -31,12 +31,13 @@
         <address>
             <p>Building <a href="stuff.html">cool stuff</a></p>
         </address>
-        
+
         {{> social-icons}}
     </main>
 
 
     {{> footer}}
+    <p class="hint">click the penguin</p>
 
     <canvas id="penguinCanvas"></canvas>
 
@@ -268,8 +269,21 @@
 
         penguin.addEventListener('mouseenter', () => penguin.classList.add('jumping'));
         penguin.addEventListener('animationend', () => penguin.classList.remove('jumping'));
-        penguin.addEventListener('click', spawnOrbit);
-        penguin.addEventListener('touchstart', spawnOrbit, { passive: false });
+
+        // Triple-click detection for easter egg
+        const clickTimes = [];
+        function handlePenguinClick(e) {
+            const now = Date.now();
+            clickTimes.push(now);
+            if (clickTimes.length > 3) clickTimes.shift();
+            if (clickTimes.length === 3 && now - clickTimes[0] < 500) {
+                window.location.href = 'rocket.html';
+                return;
+            }
+            spawnOrbit(e);
+        }
+        penguin.addEventListener('click', handlePenguinClick);
+        penguin.addEventListener('touchstart', handlePenguinClick, { passive: false });
 
         document.getElementById('email').textContent = ['hello', 'v4rgas.com'].join('@');
     </script>
