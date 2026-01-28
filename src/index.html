@@ -4,6 +4,7 @@
 <head>
     {{> head-common}}
     <link rel="stylesheet" href="landing.css">
+    <link rel="stylesheet" href="stuff.css">
     <title>v4rgas</title>
     <meta name="description" content="Juan Vargas - Software Engineer">
     <link rel="canonical" href="https://v4rgas.com/">
@@ -28,266 +29,60 @@
     <main class="landing">
         <img id="penguin" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABYElEQVRYR+2WOQ7CQAxFQ4egIBU3YKnhFJyJmjNxCqhZbkAVChDQAI5kcMzYHodAhES6LBq//8f+k0ZS89WouX7yB/hNB07H7Cr1TrOVukS5PoaiWLyTdl8Y9tkuf+aBcAFoxZHGC+EGCCnnVgBErAtugPvCsA15TYRB1fT+4wDcCYD4OsBhnuZOtCdZ8nEA2oBYmO89gMBVeQ+Eun8xK7bPePqMBs8kmE3Ii+Pi6822YMCg33v0ALoQkwlRALThEEBKQv6tNQ0qgKReO8JDsBqECeBRj2AeF0SAMuorByijniZkzEgGHZAOHasBefGYaRABQD0NHBoy1gTQhLRciAagkasB8JTEmJYywQWgQXDHEBIAzpdLfoKGxlEFgLgdjjoFwbgVIRe4+tVyn0BEa9FsNiFmPoDggtIWUOCY4rBOdA7QoqFpKPuPaCahpJbu5zt/yeZhpOV+Fe/+ALU7cANdMwgw8MOMrAAAAABJRU5ErkJggg==" alt="Juan Vargas">
         <h1>Juan Vargas</h1>
-        <address>
-            <p>Building <a href="stuff.html">cool stuff</a></p>
-        </address>
+        <p class="tagline">i build things, then make them less bad</p>
 
         {{> social-icons}}
+
+        {{> footer}}
     </main>
 
+    <section id="stuff">
+        <h1>What I've been up to</h1>
 
-    {{> footer}}
-    <p class="hint">click the penguin</p>
+        <h2>2026</h2>
+        <ul class="tl">
+            <li>
+                <a href="rocket.html">rocket sim with n-body physics and trajectory prediction</a>
+                <span class="date">Jan 28</span>
+            </li>
+        </ul>
+
+        <h2>2025</h2>
+        <ul class="tl">
+            <li>
+                <a href="https://25.hack.platan.us/vote/themis">platanus hack 2025 pitch for themis (our project)</a>
+                <span class="date">Nov 21</span>
+            </li>
+            <li>
+                <a href="https://peek.v4rgas.com/?game=v4rgas">sortEm arcade edition (game i made for mini hackathon inside platanus hack 25)</a>
+                <span class="date">Nov 21</span>
+            </li>
+            <li>
+                <a href="https://github.com/v4rgas/apuntes">all my notes from college</a>
+                <span class="date">Jul 2</span>
+            </li>
+            <li>
+                <a href="https://medium.com/blar-io/teaching-blar-to-give-better-code-reviews-how-we-built-our-text-based-recommender-f84bfb119c2a">teaching blar to give better code reviews</a>
+                <span class="date">Apr 30</span>
+            </li>
+        </ul>
+
+        <h2>2024</h2>
+        <ul class="tl">
+            <li>
+                <a href="https://medium.com/@v4rgas/how-we-built-a-tool-to-turn-any-code-base-into-a-graph-of-its-relationships-23c7bd130f13">how we built a tool to turn any code base into a graph</a>
+                <span class="date">Dec 17</span>
+            </li>
+            <li>
+                <a href="https://vote.hack.platan.us/projects/quompy">platanus hack 2024 pitch for quompy (our project)</a>
+                <span class="date">Nov 24</span>
+            </li>
+        </ul>
+    </section>
 
     <canvas id="penguinCanvas"></canvas>
-
-    <script>
-        const penguin = document.getElementById('penguin');
-        const canvas = document.getElementById('penguinCanvas');
-        const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false });
-
-        // === WebGL Setup ===
-        const vsSource = `#version 300 es
-            in vec2 aVertex;
-            in vec3 aInstance; // x, y, size
-            in float aAlpha;
-            uniform vec2 uRes;
-            out vec2 vUV;
-            out float vAlpha;
-            void main() {
-                vUV = aVertex * 0.5 + 0.5;
-                vAlpha = aAlpha;
-                vec2 pos = aInstance.xy + aVertex * aInstance.z * 0.5;
-                vec2 clip = (pos / uRes) * 2.0 - 1.0;
-                gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-            }`;
-        const fsSource = `#version 300 es
-            precision mediump float;
-            in vec2 vUV;
-            in float vAlpha;
-            uniform sampler2D uTex;
-            out vec4 fragColor;
-            void main() {
-                vec4 c = texture(uTex, vUV);
-                fragColor = vec4(c.rgb, c.a * vAlpha);
-            }`;
-
-        function createShader(type, src) {
-            const s = gl.createShader(type);
-            gl.shaderSource(s, src);
-            gl.compileShader(s);
-            return s;
-        }
-        const prog = gl.createProgram();
-        gl.attachShader(prog, createShader(gl.VERTEX_SHADER, vsSource));
-        gl.attachShader(prog, createShader(gl.FRAGMENT_SHADER, fsSource));
-        gl.linkProgram(prog);
-        gl.useProgram(prog);
-
-        const uRes = gl.getUniformLocation(prog, 'uRes');
-        const aVertex = gl.getAttribLocation(prog, 'aVertex');
-        const aInstance = gl.getAttribLocation(prog, 'aInstance');
-        const aAlpha = gl.getAttribLocation(prog, 'aAlpha');
-
-        // Quad vertices
-        const quadBuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-
-        // Instance buffers
-        const MAX_INSTANCES = 3000;
-        const instanceData = new Float32Array(MAX_INSTANCES * 3); // x, y, size
-        const alphaData = new Float32Array(MAX_INSTANCES);
-        const instanceBuf = gl.createBuffer();
-        const alphaBuf = gl.createBuffer();
-
-        // VAO setup
-        const vao = gl.createVertexArray();
-        gl.bindVertexArray(vao);
-        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
-        gl.enableVertexAttribArray(aVertex);
-        gl.vertexAttribPointer(aVertex, 2, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, instanceData.byteLength, gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(aInstance);
-        gl.vertexAttribPointer(aInstance, 3, gl.FLOAT, false, 0, 0);
-        gl.vertexAttribDivisor(aInstance, 1);
-        gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuf);
-        gl.bufferData(gl.ARRAY_BUFFER, alphaData.byteLength, gl.DYNAMIC_DRAW);
-        gl.enableVertexAttribArray(aAlpha);
-        gl.vertexAttribPointer(aAlpha, 1, gl.FLOAT, false, 0, 0);
-        gl.vertexAttribDivisor(aAlpha, 1);
-
-        // Load texture
-        const tex = gl.createTexture();
-        const img = new Image();
-        img.onload = () => {
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.generateMipmap(gl.TEXTURE_2D);
-        };
-        img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -0.5 32 32" shape-rendering="crispEdges"><path stroke="%23070606" d="M14 6h5M13 7h7M12 8h9M15 9h2M19 9h2M14 10h4M19 10h2M14 11h1M17 11h1M19 11h2M12 12h1M19 12h2M11 13h3M18 13h3M10 14h2M19 14h3M9 15h3M20 15h3M9 16h2M20 16h3M8 17h3M21 17h3M8 18h2M21 18h3M7 19h3M21 19h3M7 20h4M20 20h4M6 21h1M10 21h2M19 21h2M23 21h2M6 22h1M11 22h1M19 22h1M24 22h1M6 23h1M12 23h1M18 23h1M24 23h1M6 24h1M12 24h7M24 24h1M7 25h1M12 25h7M23 25h1M8 26h5M18 26h5"/><path stroke="%23000000" d="M12 9h1M12 10h1M12 11h1M25 23h1"/><path stroke="%23f8f6f0" d="M13 9h2M17 9h2M13 10h1M18 10h1M13 11h1M18 11h1M12 14h2M18 14h1M12 15h8M11 16h9M11 17h10M10 18h11M10 19h11M11 20h9M12 21h7M12 22h7M13 23h5"/><path stroke="%23fcbd16" d="M15 11h2M13 12h6M7 21h3M21 21h2M7 22h4M20 22h4M7 23h5M19 23h5M8 24h4M19 24h4M10 25h1M20 25h2"/><path stroke="%23d48b07" d="M14 13h4M7 24h1M23 24h1M8 25h2M11 25h1M19 25h1M22 25h1"/><path stroke="%23d1d0cb" d="M14 14h4"/></svg>';
-
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        // === Physics (same typed arrays) ===
-        const G = 800, SOFTENING_SQ = 400, DAMPING = 0.9995;
-        const PENGUIN_COUNT = 150, PENGUIN_SIZE = 28, SUN_MASS = 5000, EXPLODE_RADIUS_SQ = 2500;
-        const MAX_BODIES = 2000;
-        const px = new Float32Array(MAX_BODIES), py = new Float32Array(MAX_BODIES);
-        const vx = new Float32Array(MAX_BODIES), vy = new Float32Array(MAX_BODIES);
-        const mass = new Float32Array(MAX_BODIES), size = new Float32Array(MAX_BODIES);
-        const spawnAt = new Float32Array(MAX_BODIES), dead = new Uint8Array(MAX_BODIES);
-
-        const MAX_PARTICLES = 500;
-        const epx = new Float32Array(MAX_PARTICLES), epy = new Float32Array(MAX_PARTICLES);
-        const evx = new Float32Array(MAX_PARTICLES), evy = new Float32Array(MAX_PARTICLES);
-        const elife = new Float32Array(MAX_PARTICLES), esize = new Float32Array(MAX_PARTICLES);
-        let particleCount = 0, bodyCount = 0, isAnimating = false, sunX, sunY;
-
-        function spawnOrbit(e) {
-            e.preventDefault();
-            const rect = penguin.getBoundingClientRect();
-            sunX = rect.left + rect.width / 2;
-            sunY = rect.top + rect.height / 2;
-
-            const wasAnimating = isAnimating;
-            if (!wasAnimating) { bodyCount = 0; particleCount = 0; }
-
-            const now = performance.now(), startIdx = bodyCount;
-            for (let i = 0; i < PENGUIN_COUNT && bodyCount < MAX_BODIES; i++) {
-                const idx = bodyCount++;
-                const edge = (Math.random() * 4) | 0, margin = 20;
-                if (edge === 0) { px[idx] = Math.random() * canvas.width; py[idx] = -margin; }
-                else if (edge === 1) { px[idx] = canvas.width + margin; py[idx] = Math.random() * canvas.height; }
-                else if (edge === 2) { px[idx] = Math.random() * canvas.width; py[idx] = canvas.height + margin; }
-                else { px[idx] = -margin; py[idx] = Math.random() * canvas.height; }
-
-                const ddx = sunX - px[idx], ddy = sunY - py[idx];
-                const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-                const dirX = ddx / dist, dirY = ddy / dist, perpX = -dirY, perpY = dirX;
-                const orbitalSpeed = Math.sqrt(G * SUN_MASS / dist) * (1.5 + Math.random() * 0.5);
-                const inwardRatio = 0.6 + Math.random() * 0.3;
-                const tangentRatio = Math.sqrt(1 - inwardRatio * inwardRatio);
-                const tangentSign = Math.random() > 0.5 ? 1 : -1;
-
-                vx[idx] = dirX * orbitalSpeed * inwardRatio + perpX * orbitalSpeed * tangentRatio * tangentSign;
-                vy[idx] = dirY * orbitalSpeed * inwardRatio + perpY * orbitalSpeed * tangentRatio * tangentSign;
-                mass[idx] = 1 + Math.random() * 2;
-                size[idx] = PENGUIN_SIZE * (0.7 + Math.random() * 0.6);
-                spawnAt[idx] = now + (idx - startIdx) * 8;
-                dead[idx] = 0;
-            }
-
-            if (wasAnimating) return;
-            isAnimating = true;
-            let lastTime = now;
-
-            function simulate() {
-                const now = performance.now();
-                const dt = Math.min((now - lastTime) / 1000, 0.033);
-                lastTime = now;
-
-                // Physics
-                for (let i = 0; i < bodyCount; i++) {
-                    if (dead[i] || now < spawnAt[i]) continue;
-                    const ddx = sunX - px[i], ddy = sunY - py[i];
-                    const distSq = ddx * ddx + ddy * ddy + SOFTENING_SQ;
-                    const dist = Math.sqrt(distSq), f = G * SUN_MASS / distSq;
-                    vx[i] += (f * ddx / dist) * dt; vy[i] += (f * ddy / dist) * dt;
-                    vx[i] *= DAMPING; vy[i] *= DAMPING;
-                    px[i] += vx[i] * dt; py[i] += vy[i] * dt;
-
-                    if (ddx * ddx + ddy * ddy < EXPLODE_RADIUS_SQ) {
-                        dead[i] = 1;
-                        for (let p = 0; p < 6 && particleCount < MAX_PARTICLES; p++) {
-                            const pidx = particleCount++, angle = (p / 6) * Math.PI * 2;
-                            epx[pidx] = px[i]; epy[pidx] = py[i];
-                            evx[pidx] = Math.cos(angle) * 200; evy[pidx] = Math.sin(angle) * 200;
-                            elife[pidx] = 0.4; esize[pidx] = size[i] * 0.4;
-                        }
-                    }
-                }
-                for (let i = 0; i < particleCount; i++) {
-                    if (elife[i] <= 0) continue;
-                    epx[i] += evx[i] * dt; epy[i] += evy[i] * dt; elife[i] -= dt;
-                }
-
-                // Build instance data
-                let idx = 0;
-                for (let i = 0; i < bodyCount; i++) {
-                    if (dead[i] || now < spawnAt[i]) continue;
-                    instanceData[idx * 3] = px[i];
-                    instanceData[idx * 3 + 1] = py[i];
-                    instanceData[idx * 3 + 2] = size[i];
-                    alphaData[idx] = 1.0;
-                    idx++;
-                }
-                for (let i = 0; i < particleCount; i++) {
-                    if (elife[i] <= 0) continue;
-                    instanceData[idx * 3] = epx[i];
-                    instanceData[idx * 3 + 1] = epy[i];
-                    instanceData[idx * 3 + 2] = esize[i];
-                    alphaData[idx] = elife[i] / 0.4;
-                    idx++;
-                }
-
-                // Render (single draw call!)
-                gl.clearColor(0, 0, 0, 0);
-                gl.clear(gl.COLOR_BUFFER_BIT);
-                gl.uniform2f(uRes, canvas.width, canvas.height);
-                gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuf);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, instanceData.subarray(0, idx * 3));
-                gl.bindBuffer(gl.ARRAY_BUFFER, alphaBuf);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, alphaData.subarray(0, idx));
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, idx);
-
-                requestAnimationFrame(simulate);
-            }
-            simulate();
-        }
-
-        function updateSunPosition() {
-            if (!isAnimating) return;
-            const rect = penguin.getBoundingClientRect();
-            sunX = rect.left + rect.width / 2;
-            sunY = rect.top + rect.height / 2;
-        }
-        window.addEventListener('resize', updateSunPosition);
-        window.addEventListener('scroll', updateSunPosition);
-
-        penguin.addEventListener('mouseenter', () => penguin.classList.add('jumping'));
-        penguin.addEventListener('animationend', () => penguin.classList.remove('jumping'));
-
-        // Triple-click detection for easter egg
-        const clickTimes = [];
-        function handlePenguinClick(e) {
-            const now = Date.now();
-            clickTimes.push(now);
-            if (clickTimes.length > 3) clickTimes.shift();
-            if (clickTimes.length === 3 && now - clickTimes[0] < 500) {
-                window.location.href = 'rocket.html';
-                return;
-            }
-            spawnOrbit(e);
-        }
-        penguin.addEventListener('click', handlePenguinClick);
-        penguin.addEventListener('touchstart', handlePenguinClick, { passive: false });
-
-        document.getElementById('email').textContent = ['hello', 'v4rgas.com'].join('@');
-    </script>
-
+    <script src="landing.js" defer></script>
+    <script>document.getElementById('email').textContent=['hello','v4rgas.com'].join('@')</script>
 </body>
 
 </html>

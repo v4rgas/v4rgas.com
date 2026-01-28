@@ -64,7 +64,6 @@ async function build() {
         'landing.css': landingCSS
     });
     await buildHTML('src/cv.html', 'cv.html');
-    await buildHTML('src/stuff.html', 'stuff.html');
     await buildHTML('src/rocket.html', 'rocket.html');
 
     // Build stuff/*.html
@@ -74,6 +73,9 @@ async function build() {
             await buildHTML(`src/stuff/${file}`, `stuff/${file}`);
         }
     }
+
+    // Copy JS files
+    cpSync('src/landing.js', 'landing.js');
 
     cpSync('src/robots.txt', 'robots.txt');
     cpSync('src/sitemap.xml', 'sitemap.xml');
