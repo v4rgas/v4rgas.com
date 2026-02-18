@@ -32,3 +32,5 @@ npm run build
 ```
 
 Outputs minified files to root. CSS is inlined into index.html.
+
+**Always run `npm run build` after making changes and before committing/pushing.**
