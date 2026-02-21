@@ -54,38 +54,97 @@ controls.update();
 const ambient = new THREE.AmbientLight(0xffffff, 0.08);
 scene.add(ambient);
 
-// Desk lamp (to the right of the monitor)
-const lampX = 30, lampZ = 5;
-const lampBaseY = -26;
+// --- Throwable system ---
+const throwables = [];
+const meshToThrowable = new Map();
+let activeThrowCount = 0;
+
+function registerThrowable(group, body, mass, onActivate) {
+  body.type = CANNON.Body.KINEMATIC;
+  body.mass = 0;
+  body.updateMassProperties();
+  world.addBody(body);
+  const t = { group, body, mass, active: false, onActivate: onActivate || null };
+  throwables.push(t);
+  group.traverse((child) => {
+    if (child.isMesh) meshToThrowable.set(child, t);
+  });
+  return t;
+}
+
+function activateThrowable(t, hitPoint) {
+  if (t.active) return;
+  t.active = true;
+  activeThrowCount++;
+  t.body.type = CANNON.Body.DYNAMIC;
+  t.body.mass = t.mass;
+  t.body.updateMassProperties();
+
+  // Impulse away from click point with upward kick
+  const pos = t.body.position;
+  const dx = pos.x - hitPoint.x;
+  const dy = pos.y - hitPoint.y;
+  const dz = pos.z - hitPoint.z;
+  const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.1;
+  const force = 40 / dist;
+  t.body.applyImpulse(new CANNON.Vec3(
+    dx * force + (Math.random() - 0.5) * 8,
+    Math.abs(dy) * force + 15 + Math.random() * 10,
+    dz * force + (Math.random() - 0.5) * 8,
+  ));
+  t.body.angularVelocity.set(
+    (Math.random() - 0.5) * 8,
+    (Math.random() - 0.5) * 8,
+    (Math.random() - 0.5) * 8,
+  );
+
+  if (t.onActivate) t.onActivate(t);
+}
+
+// --- Desk lamp (grouped for physics) ---
+const lampGroup = new THREE.Group();
+const lampOriginX = 27, lampOriginY = -15, lampOriginZ = 5;
+lampGroup.position.set(lampOriginX, lampOriginY, lampOriginZ);
+scene.add(lampGroup);
+
 const lampMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.6 });
 
-// Base
 const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.5, 1, 8), lampMat);
-lampBase.position.set(lampX, lampBaseY + 0.5, lampZ);
-scene.add(lampBase);
+lampBase.position.set(3, -10.5, 0);
+lampGroup.add(lampBase);
 
-// Pole
 const lampPole = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 18, 6), lampMat);
-lampPole.position.set(lampX, lampBaseY + 10, lampZ);
-scene.add(lampPole);
+lampPole.position.set(3, -1, 0);
+lampGroup.add(lampPole);
 
-// Arm (angled toward monitor)
 const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 12, 6), lampMat);
-lampArm.position.set(lampX - 4, lampBaseY + 20, lampZ);
+lampArm.position.set(-1, 9, 0);
 lampArm.rotation.z = 0.6;
-scene.add(lampArm);
+lampGroup.add(lampArm);
 
-// Shade (cone)
 const shadeMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5, side: THREE.DoubleSide });
 const lampShade = new THREE.Mesh(new THREE.ConeGeometry(4, 5, 8, 1, true), shadeMat);
-lampShade.position.set(lampX - 8, lampBaseY + 22, lampZ);
+lampShade.position.set(-5, 11, 0);
 lampShade.rotation.z = 0.02;
-scene.add(lampShade);
+lampGroup.add(lampShade);
 
-// Warm point light from the lamp
 const lampLight = new THREE.PointLight(0xffe4c4, 80, 120, 1.5);
-lampLight.position.set(lampX - 8, lampBaseY + 20, lampZ);
-scene.add(lampLight);
+lampLight.position.set(-5, 9, 0);
+lampGroup.add(lampLight);
+
+const lampLightBase = 80;
+let lampFlicker = -1;
+
+const lampBody = new CANNON.Body({
+  position: new CANNON.Vec3(lampOriginX, lampOriginY, lampOriginZ),
+  linearDamping: 0.3,
+  angularDamping: 0.4,
+});
+lampBody.addShape(new CANNON.Box(new CANNON.Vec3(5, 11, 3)));
+
+registerThrowable(lampGroup, lampBody, 5, () => {
+  lampFlicker = 0.5;
+});
 
 // Screen dimensions (for overlay + backing)
 const screenW = 45, screenH = 34;
@@ -291,6 +350,8 @@ penguinGroup.add(crtOverlay);
 // Voxel setup
 const boxGeo = new THREE.BoxGeometry(1, 1, 1);
 const voxels = [];
+let activeCount = 0;
+const voxelShape = new CANNON.Box(new CANNON.Vec3(0.45, 0.45, 0.45));
 
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -312,36 +373,35 @@ async function init() {
   const offsetX = -img.width / 2 + 0.5;
   const offsetY = img.height / 2 - 0.5;
 
+  // Shared material cache — reuse by quantized color key
+  const materialCache = new Map();
+  const snap = (v) => v > 180 ? 255 : Math.round(v / 32) * 32;
+
   for (let y = 0; y < img.height; y++) {
     for (let x = 0; x < img.width; x++) {
       const i = (y * img.width + x) * 4;
       const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
       if (a < 128) continue;
 
-      // Quantize to clean palette (snap to nearest 32), push bright toward white
-      const snap = (v) => v > 180 ? 255 : Math.round(v / 32) * 32;
       const qr = snap(r), qg = snap(g), qb = snap(b);
-      const isWhite = qr === 255 && qg === 255 && qb === 255;
-      const material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(qr / 255, qg / 255, qb / 255),
-        ...(isWhite && { emissive: new THREE.Color(0.3, 0.3, 0.3) }),
-      });
+      const key = (qr << 16) | (qg << 8) | qb;
+      let material = materialCache.get(key);
+      if (!material) {
+        const isWhite = qr === 255 && qg === 255 && qb === 255;
+        material = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(qr / 255, qg / 255, qb / 255),
+          ...(isWhite && { emissive: new THREE.Color(0.3, 0.3, 0.3) }),
+        });
+        materialCache.set(key, material);
+      }
       const mesh = new THREE.Mesh(boxGeo, material);
       const px = x + offsetX;
       const py = -y + offsetY;
       mesh.position.set(px, py, 0);
       penguinGroup.add(mesh);
 
-      const shape = new CANNON.Box(new CANNON.Vec3(0.45, 0.45, 0.45));
-      const body = new CANNON.Body({
-        mass: 1,
-        type: CANNON.Body.KINEMATIC,
-        position: new CANNON.Vec3(px, py, 0),
-      });
-      body.addShape(shape);
-      world.addBody(body);
-
-      voxels.push({ mesh, body, active: false });
+      // Defer physics body creation until explosion — kinematic bodies don't need it
+      voxels.push({ mesh, body: null, active: false, px, py });
     }
   }
 
@@ -349,17 +409,60 @@ async function init() {
 }
 
 let firstFrame = true;
+const SLEEP_SPEED = 0.5;
 
 function animate() {
   requestAnimationFrame(animate);
   crtOverlay.material.uniforms.uTime.value = performance.now() * 0.001;
-  world.step(1 / 60);
-  for (const v of voxels) {
-    if (v.active) {
+
+  // Only step physics when there are active bodies
+  if (activeCount > 0 || activeThrowCount > 0) {
+    world.step(1 / 60);
+    for (const v of voxels) {
+      if (!v.active) continue;
       v.mesh.position.copy(v.body.position);
       v.mesh.quaternion.copy(v.body.quaternion);
+
+      // Sleep bodies that have nearly stopped
+      const vel = v.body.velocity;
+      const avel = v.body.angularVelocity;
+      if (vel.lengthSquared() < SLEEP_SPEED && avel.lengthSquared() < SLEEP_SPEED) {
+        v.body.type = CANNON.Body.KINEMATIC;
+        v.body.velocity.setZero();
+        v.body.angularVelocity.setZero();
+        v.active = false;
+        activeCount--;
+      }
+    }
+
+    // Sync throwable groups from physics
+    for (const t of throwables) {
+      if (!t.active) continue;
+      t.group.position.copy(t.body.position);
+      t.group.quaternion.copy(t.body.quaternion);
+
+      const vel = t.body.velocity;
+      const avel = t.body.angularVelocity;
+      if (vel.lengthSquared() < SLEEP_SPEED && avel.lengthSquared() < SLEEP_SPEED) {
+        t.body.type = CANNON.Body.KINEMATIC;
+        t.body.velocity.setZero();
+        t.body.angularVelocity.setZero();
+        t.active = false;
+        activeThrowCount--;
+      }
     }
   }
+
+  // Lamp light flicker decay
+  if (lampFlicker > 0) {
+    lampFlicker -= 1 / 60;
+    lampLight.intensity = lampLightBase * (Math.random() > 0.5 ? 0.6 : 0.1);
+    if (lampFlicker <= 0) {
+      lampFlicker = -1;
+      lampLight.intensity = 0;
+    }
+  }
+
   controls.update();
   renderer.render(scene, camera);
 
@@ -377,16 +480,44 @@ init();
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
+// Build mesh list once, filter out activated voxels lazily
+let raycasterMeshes = null;
+function getRaycasterMeshes() {
+  if (!raycasterMeshes) raycasterMeshes = voxels.map((v) => v.mesh);
+  return raycasterMeshes;
+}
+
+function getThrowableMeshes() {
+  const meshes = [];
+  for (const t of throwables) {
+    if (t.active) continue;
+    t.group.traverse((child) => { if (child.isMesh) meshes.push(child); });
+  }
+  return meshes;
+}
+
 function handleExplode(clientX, clientY) {
   mouse.x = (clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
-  const hits = raycaster.intersectObjects(voxels.map((v) => v.mesh));
+  // Check throwables first
+  const throwHits = raycaster.intersectObjects(getThrowableMeshes());
+  if (throwHits.length > 0) {
+    const t = meshToThrowable.get(throwHits[0].object);
+    if (t && !t.active) {
+      activateThrowable(t, throwHits[0].point);
+      return;
+    }
+  }
+
+  // Then check voxels
+  const hits = raycaster.intersectObjects(getRaycasterMeshes());
   if (hits.length === 0) return;
 
   // Convert hit point to penguinGroup local space
   const hitLocal = penguinGroup.worldToLocal(hits[0].point.clone());
+  let activated = false;
   for (const v of voxels) {
     if (v.active) continue;
     const dx = v.mesh.position.x - hitLocal.x;
@@ -402,15 +533,28 @@ function handleExplode(clientX, clientY) {
     scene.add(v.mesh);
     v.mesh.position.copy(worldPos);
 
-    // Sync physics body to world position
-    v.body.position.copy(worldPos);
-    v.body.type = CANNON.Body.DYNAMIC;
-    v.body.mass = 1;
-    v.body.updateMassProperties();
-    v.active = true;
+    // Lazily create physics body on first activation
+    if (!v.body) {
+      const body = new CANNON.Body({
+        mass: 1,
+        type: CANNON.Body.DYNAMIC,
+        position: new CANNON.Vec3(worldPos.x, worldPos.y, worldPos.z),
+        linearDamping: 0.3,
+        angularDamping: 0.4,
+      });
+      body.addShape(voxelShape);
+      world.addBody(body);
+      v.body = body;
+    } else {
+      v.body.position.copy(worldPos);
+      v.body.type = CANNON.Body.DYNAMIC;
+      v.body.mass = 1;
+      v.body.updateMassProperties();
+    }
 
-    v.body.linearDamping = 0.3;
-    v.body.angularDamping = 0.4;
+    v.active = true;
+    activeCount++;
+    activated = true;
 
     const force = 20 / (dist + 1);
     const rx = (Math.random() - 0.5) * force * 0.8;
@@ -423,6 +567,9 @@ function handleExplode(clientX, clientY) {
       (Math.random() - 0.5) * 10,
     );
   }
+
+  // Rebuild raycaster mesh list after activating voxels (they left penguinGroup)
+  if (activated) raycasterMeshes = null;
 }
 
 window.addEventListener('click', (e) => handleExplode(e.clientX, e.clientY));
