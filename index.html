@@ -54,6 +54,25 @@
       image-rendering: pixelated;
     }
 
+    #loading-bar {
+      position: absolute;
+      bottom: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 3px;
+      background: #222;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #loading-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #666;
+      transition: width 0.2s ease-out;
+    }
+
     canvas { display: block; }
 
 
@@ -136,6 +155,7 @@
 
   <div id="blackout">
     <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABYElEQVRYR+2WOQ7CQAxFQ4egIBU3YKnhFJyJmjNxCqhZbkAVChDQAI5kcMzYHodAhES6LBq//8f+k0ZS89WouX7yB/hNB07H7Cr1TrOVukS5PoaiWLyTdl8Y9tkuf+aBcAFoxZHGC+EGCCnnVgBErAtugPvCsA15TYRB1fT+4wDcCYD4OsBhnuZOtCdZ8nEA2oBYmO89gMBVeQ+Eun8xK7bPePqMBs8kmE3Ii+Pi6822YMCg33v0ALoQkwlRALThEEBKQv6tNQ0qgKReO8JDsBqECeBRj2AeF0SAMuorByijniZkzEgGHZAOHasBefGYaRABQD0NHBoy1gTQhLRciAagkasB8JTEmJYywQWgQXDHEBIAzpdLfoKGxlEFgLgdjjoFwbgVIRe4+tVyn0BEa9FsNiFmPoDggtIWUOCY4rBOdA7QoqFpKPuPaCahpJbu5zt/yeZhpOV+Fe/+ALU7cANdMwgw8MOMrAAAAABJRU5ErkJggg==" alt="Tux" />
+    <div id="loading-bar"><div id="loading-bar-fill"></div></div>
   </div>
 
   <div class="info">

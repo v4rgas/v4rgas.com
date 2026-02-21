@@ -201,8 +201,14 @@ dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.183.1/examples/
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
+const loadingBar = document.getElementById('loading-bar-fill');
+function setLoadProgress(pct) {
+  if (loadingBar) loadingBar.style.width = pct + '%';
+}
+
 const crtReady = new Promise((resolve) => {
   gltfLoader.load('Untitled-draco.glb', (gltf) => {
+    setLoadProgress(80);
     const object = gltf.scene;
     const box = new THREE.Box3().setFromObject(object);
     const size = box.getSize(new THREE.Vector3());
@@ -233,6 +239,8 @@ const crtReady = new Promise((resolve) => {
 
     crtGroup.add(object);
     resolve();
+  }, (xhr) => {
+    if (xhr.lengthComputable) setLoadProgress((xhr.loaded / xhr.total) * 80);
   });
 });
 
@@ -428,6 +436,7 @@ async function init() {
     }
   }
 
+  setLoadProgress(100);
   animate();
 }
 
