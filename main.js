@@ -39,7 +39,7 @@ camera.lookAt(0, -2, 0);
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 // Orbit controls
@@ -138,36 +138,39 @@ scene.add(crtGroup);
 
 const gltfLoader = new GLTFLoader();
 
-gltfLoader.load('Untitled.glb', (gltf) => {
-  const object = gltf.scene;
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
+const crtReady = new Promise((resolve) => {
+  gltfLoader.load('Untitled.glb', (gltf) => {
+    const object = gltf.scene;
+    const box = new THREE.Box3().setFromObject(object);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
 
-  const targetHeight = 42;
-  const scale = targetHeight / size.y;
-  object.scale.setScalar(scale);
+    const targetHeight = 42;
+    const scale = targetHeight / size.y;
+    object.scale.setScalar(scale);
 
-  object.position.set(
-    -center.x * scale,
-    -box.min.y * scale + deskY,
-    -center.z * scale - 5,
-  );
+    object.position.set(
+      -center.x * scale,
+      -box.min.y * scale + deskY,
+      -center.z * scale - 5,
+    );
 
-  object.rotation.y = -Math.PI / 2;
+    object.rotation.y = -Math.PI / 2;
 
-  // Apply lowres textures to all meshes in the model
-  object.traverse((child) => {
-    if (child.isMesh) {
-      child.material = new THREE.MeshStandardMaterial({
-        map: bodyTex,
-        roughness: 0.75,
-        color: 0xd4c8b8,
-      });
-    }
+    // Apply lowres textures to all meshes in the model
+    object.traverse((child) => {
+      if (child.isMesh) {
+        child.material = new THREE.MeshStandardMaterial({
+          map: bodyTex,
+          roughness: 0.75,
+          color: 0xd4c8b8,
+        });
+      }
+    });
+
+    crtGroup.add(object);
+    resolve();
   });
-
-  crtGroup.add(object);
 });
 
 // Group for penguin + screen stuff
@@ -294,7 +297,7 @@ function loadImage(src) {
 }
 
 async function init() {
-  const img = await loadImage('penguin.png');
+  const [img] = await Promise.all([loadImage('penguin.png'), crtReady]);
   const canvas = document.createElement('canvas');
   canvas.width = img.width;
   canvas.height = img.height;
@@ -370,9 +373,9 @@ init();
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-window.addEventListener('click', (e) => {
-  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+function handleExplode(clientX, clientY) {
+  mouse.x = (clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
   const hits = raycaster.intersectObjects(voxels.map((v) => v.mesh));
@@ -416,6 +419,27 @@ window.addEventListener('click', (e) => {
       (Math.random() - 0.5) * 10,
     );
   }
+}
+
+window.addEventListener('click', (e) => handleExplode(e.clientX, e.clientY));
+
+// Touch support — explode on tap (ignore drags/orbit)
+let touchStart = null;
+window.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 1) {
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+});
+window.addEventListener('touchend', (e) => {
+  if (!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x;
+  const dy = t.clientY - touchStart.y;
+  // Only count as tap if finger didn't move much (not an orbit drag)
+  if (Math.sqrt(dx * dx + dy * dy) < 15) {
+    handleExplode(t.clientX, t.clientY);
+  }
+  touchStart = null;
 });
 
 // Debug mode (Ctrl+Shift+D to toggle)
