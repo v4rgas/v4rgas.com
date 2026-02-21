@@ -203,6 +203,7 @@ gltfLoader.setDRACOLoader(dracoLoader);
 
 const loadingBar = document.getElementById('loading-bar-fill');
 function setLoadProgress(pct) {
+  if (pct >= 100 && window.__loadFakeProgress) clearInterval(window.__loadFakeProgress);
   if (loadingBar) loadingBar.style.width = pct + '%';
 }
 
