@@ -268,6 +268,29 @@ screenMesh.position.set(0, 0, -0.10);
 screenMesh.scale.set(0.78, 0.82, 1);
 penguinGroup.add(screenMesh);
 
+// Hidden text revealed after explosion
+const hiddenCanvas = document.createElement('canvas');
+hiddenCanvas.width = 512;
+hiddenCanvas.height = 256;
+const hctx = hiddenCanvas.getContext('2d');
+hctx.clearRect(0, 0, 512, 256);
+hctx.fillStyle = '#000000';
+hctx.font = 'bold 32px monospace';
+hctx.textAlign = 'center';
+hctx.textBaseline = 'middle';
+hctx.fillText('break things', 256, 105);
+hctx.fillText('to make them better', 256, 155);
+const hiddenTex = new THREE.CanvasTexture(hiddenCanvas);
+hiddenTex.magFilter = THREE.NearestFilter;
+hiddenTex.minFilter = THREE.LinearFilter;
+const hiddenTextMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(20, 10),
+  new THREE.MeshBasicMaterial({ map: hiddenTex, transparent: true }),
+);
+hiddenTextMesh.position.set(0, 0, -0.05);
+hiddenTextMesh.scale.set(0.78, 0.82, 1);
+penguinGroup.add(hiddenTextMesh);
+
 const deskY = -26;
 
 // Room environment
@@ -476,6 +499,16 @@ function animate() {
 
 init();
 
+// Autoplay explosion sequence (local space coords, screen-size independent)
+const autoplayClicks = [
+  {"t":705,"type":"voxel","x":1.14,"y":-0.93,"z":0.5},
+  {"t":1385,"type":"throw","idx":0,"x":21.09,"y":-3.56,"z":6.26},
+];
+const AUTOPLAY_DELAY = 3000;
+if (autoplayClicks.length > 0) {
+  setTimeout(() => replayClicks(autoplayClicks), AUTOPLAY_DELAY);
+}
+
 // Click to explode
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -517,6 +550,10 @@ function handleExplode(clientX, clientY) {
 
   // Convert hit point to penguinGroup local space
   const hitLocal = penguinGroup.worldToLocal(hits[0].point.clone());
+  explodeAtLocal(hitLocal);
+}
+
+function explodeAtLocal(hitLocal) {
   let activated = false;
   for (const v of voxels) {
     if (v.active) continue;
@@ -572,7 +609,68 @@ function handleExplode(clientX, clientY) {
   if (activated) raycasterMeshes = null;
 }
 
-window.addEventListener('click', (e) => handleExplode(e.clientX, e.clientY));
+function replayClicks(clicks) {
+  replaying = true;
+  for (const click of clicks) {
+    setTimeout(() => {
+      if (click.type === 'throw') {
+        const t = throwables[click.idx];
+        if (t && !t.active) activateThrowable(t, new THREE.Vector3(click.x, click.y, click.z));
+      } else {
+        explodeAtLocal(new THREE.Vector3(click.x, click.y, click.z));
+      }
+    }, click.t);
+  }
+  const lastT = clicks[clicks.length - 1].t;
+  setTimeout(() => { replaying = false; }, lastT + 100);
+}
+
+// Click recording & replay (debug mode)
+let recording = false;
+let recordedClicks = [];
+let recordStartTime = 0;
+let replaying = false;
+
+window.addEventListener('click', (e) => {
+  if (recording) {
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    // Check throwables first
+    const throwHits = raycaster.intersectObjects(getThrowableMeshes());
+    if (throwHits.length > 0) {
+      const t = meshToThrowable.get(throwHits[0].object);
+      if (t && !t.active) {
+        const idx = throwables.indexOf(t);
+        const p = throwHits[0].point;
+        recordedClicks.push({
+          t: performance.now() - recordStartTime,
+          type: 'throw', idx,
+          x: parseFloat(p.x.toFixed(2)),
+          y: parseFloat(p.y.toFixed(2)),
+          z: parseFloat(p.z.toFixed(2)),
+        });
+        if (debugEl) updateDebug();
+      }
+    } else {
+      // Check voxels
+      const hits = raycaster.intersectObjects(getRaycasterMeshes());
+      if (hits.length > 0) {
+        const hitLocal = penguinGroup.worldToLocal(hits[0].point.clone());
+        recordedClicks.push({
+          t: performance.now() - recordStartTime,
+          type: 'voxel',
+          x: parseFloat(hitLocal.x.toFixed(2)),
+          y: parseFloat(hitLocal.y.toFixed(2)),
+          z: parseFloat(hitLocal.z.toFixed(2)),
+        });
+        if (debugEl) updateDebug();
+      }
+    }
+  }
+  if (!replaying) handleExplode(e.clientX, e.clientY);
+});
 
 // Touch support — explode on tap (ignore drags/orbit)
 let touchStart = null;
@@ -623,7 +721,9 @@ function updateDebug() {
     `screen:  z=${s.z.toFixed(2)}  scale=(${ss.x.toFixed(2)}, ${ss.y.toFixed(2)})\n` +
     `overlay: z=${o.z.toFixed(2)}  scale=(${os.x.toFixed(2)}, ${os.y.toFixed(2)})\n` +
     `A/D=x  W/S=y  Q/E=z  R/F=screen-z  T/G=overlay-z\n` +
-    `I/K=scaleY  J/L=scaleX (screen+overlay)`;
+    `I/K=scaleY  J/L=scaleX (screen+overlay)\n` +
+    `P=record clicks (${recording ? 'RECORDING' : 'off'})  ${recordedClicks.length} clicks\n` +
+    `O=replay  C=copy to console  X=clear`;
 }
 
 window.addEventListener('keydown', (e) => {
@@ -650,6 +750,25 @@ window.addEventListener('keydown', (e) => {
     case 'k': screenMesh.scale.y -= 0.02; crtOverlay.scale.y -= 0.02; break;
     case 'l': screenMesh.scale.x += 0.02; crtOverlay.scale.x += 0.02; break;
     case 'j': screenMesh.scale.x -= 0.02; crtOverlay.scale.x -= 0.02; break;
+    case 'p':
+      recording = !recording;
+      if (recording) {
+        recordedClicks = [];
+        recordStartTime = performance.now();
+      }
+      break;
+    case 'o':
+      if (recordedClicks.length > 0 && !replaying) {
+        replaying = true;
+        replayClicks(recordedClicks);
+      }
+      break;
+    case 'c':
+      console.log(JSON.stringify(recordedClicks));
+      break;
+    case 'x':
+      recordedClicks = [];
+      break;
     default: return;
   }
   updateDebug();
