@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // Physics world
@@ -136,10 +137,13 @@ const crtGroup = new THREE.Group();
 crtGroup.position.set(-8.7, 0, -29);
 scene.add(crtGroup);
 
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.183.1/examples/jsm/libs/draco/');
 const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
 
 const crtReady = new Promise((resolve) => {
-  gltfLoader.load('Untitled.glb', (gltf) => {
+  gltfLoader.load('Untitled-draco.glb', (gltf) => {
     const object = gltf.scene;
     const box = new THREE.Box3().setFromObject(object);
     const size = box.getSize(new THREE.Vector3());
