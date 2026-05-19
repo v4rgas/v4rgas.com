@@ -3,6 +3,12 @@ import * as CANNON from 'cannon-es';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import posthog from 'posthog-js';
+
+posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  person_profiles: 'identified_only',
+});
 
 // Physics world
 const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.8, 0) });
@@ -438,6 +444,7 @@ async function init() {
   }
 
   setLoadProgress(100);
+  posthog.capture('scene loaded', { voxel_count: voxels.length, is_mobile: isMobile });
   animate();
 }
 
@@ -549,6 +556,7 @@ function handleExplode(clientX, clientY) {
   if (throwHits.length > 0) {
     const t = meshToThrowable.get(throwHits[0].object);
     if (t && !t.active) {
+      posthog.capture('lamp thrown');
       activateThrowable(t, throwHits[0].point);
       return;
     }
@@ -560,6 +568,7 @@ function handleExplode(clientX, clientY) {
 
   // Convert hit point to penguinGroup local space
   const hitLocal = penguinGroup.worldToLocal(hits[0].point.clone());
+  posthog.capture('penguin exploded', { voxels_remaining: voxels.filter((v) => !v.active).length });
   explodeAtLocal(hitLocal);
 }
 
@@ -789,4 +798,14 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Link click tracking
+document.querySelectorAll('.links a').forEach((link) => {
+  link.addEventListener('click', () => {
+    posthog.capture('link clicked', {
+      link_label: link.getAttribute('title') || link.textContent.trim(),
+      link_href: link.getAttribute('href'),
+    });
+  });
 });

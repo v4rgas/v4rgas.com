@@ -13,6 +13,7 @@
   "packageManager": "pnpm@10.28.2",
   "dependencies": {
     "cannon-es": "^0.20.0",
+    "posthog-js": "^1.373.5",
     "three": "^0.183.1"
   },
   "devDependencies": {
